@@ -12,7 +12,7 @@ A URL shortening service built with Go, using Echo for the web server, PostgreSQ
 
 ## Requirements
 
-- Go 1.21 or higher
+- Go 1.23 or higher
 - PostgreSQL
 - Valkey (or Redis)
 
@@ -44,6 +44,84 @@ A URL shortening service built with Go, using Echo for the web server, PostgreSQ
    ```
    go run main.go
    ```
+
+## Using the Makefile
+
+This project includes a Makefile to simplify common development tasks. Here are some of the available commands:
+
+### Building the Application
+
+```
+# Build for the current platform
+make build
+
+# Build for multiple platforms (Linux, macOS, Windows)
+make build-all
+
+# Build for a specific platform
+make build-linux
+make build-darwin
+make build-windows
+```
+
+### Running the Application
+
+```
+# Build and run
+make run
+```
+
+### Testing
+
+```
+# Run all tests
+make test
+
+# Run tests with race detection
+make test-race
+
+# Generate test coverage report
+make coverage
+```
+
+### Code Quality
+
+```
+# Run linter
+make lint
+
+# Format code
+make fmt
+```
+
+### Docker Operations
+
+```
+# Build Docker image
+make docker-build
+
+# Run Docker container
+make docker-run
+
+# Start all services with Docker Compose
+make docker-up
+
+# Stop all services
+make docker-down
+```
+
+### Other Commands
+
+```
+# Clean build artifacts
+make clean
+
+# Tidy dependencies
+make tidy
+
+# Show all available commands
+make help
+```
 
 ## API Endpoints
 
@@ -112,6 +190,24 @@ docker run -p 8080:8080 \
   -e BASE_URL=http://localhost:8080 \
   urlshortener
 ```
+
+### Using Docker Compose
+
+The project includes a `docker-compose.yml` file that sets up the entire application stack, including PostgreSQL and Valkey:
+
+1. Copy the example environment file:
+   ```
+   cp .env.example .env
+   ```
+
+2. Customize the `.env` file with your own values (optional)
+
+3. Run the application stack:
+   ```
+   docker-compose up -d
+   ```
+
+The `docker-compose.yml` file is configured to load environment variables from the `.env` file. If a variable is not defined in the `.env` file, it will use the default value specified in the `docker-compose.yml` file.
 
 ## Testing
 
