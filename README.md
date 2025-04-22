@@ -185,29 +185,138 @@ You can run the application using Docker:
 ```
 docker build -t urlshortener .
 docker run -p 8080:8080 \
-  -e POSTGRES_URL=postgres://postgres:postgres@postgres:5432/urlshortener?sslmode=disable \
+  -e POSTGRES_URL=postgres://postgres:postgres@host.docker.internal:5432/urlshortener?sslmode=disable \
   -e VALKEY_ADDR=valkey:6379 \
   -e BASE_URL=http://localhost:8080 \
   urlshortener
 ```
 
+Note: This example uses `host.docker.internal` to connect to PostgreSQL running on your host machine. Make sure PostgreSQL is running on your host and is configured to accept connections.
+
 ### Using Docker Compose
 
-The project includes a `docker-compose.yml` file that sets up the entire application stack, including PostgreSQL and Valkey:
+The project includes a `docker-compose.yml` file that sets up the application stack with flexible database options:
 
 1. Copy the example environment file:
    ```
    cp .env.example .env
    ```
 
-2. Customize the `.env` file with your own values (optional)
+2. Customize the `.env` file with your own values:
+   - Set `USE_DOCKER_POSTGRES=true` to use PostgreSQL in Docker, or `false` to use a host PostgreSQL
+   - Set `ENABLE_BACKUP=true` to enable automated backups (only works with Docker PostgreSQL)
+   - Set `ENABLE_DEV_MODE=true` to enable development mode with hot reloading
+   - Update `POSTGRES_URL` based on your database choice:
+     - For host PostgreSQL: `postgres://user:password@host.docker.internal:5432/dbname`
+     - For Docker PostgreSQL: `postgres://user:password@postgres:5432/dbname`
 
-3. Run the application stack:
+3. Run the application stack with the appropriate profile:
+
+   For using host PostgreSQL (default):
    ```
    docker-compose up -d
    ```
 
+   For using Docker PostgreSQL:
+   ```
+   docker-compose --profile postgres up -d
+   ```
+
+   For using Docker PostgreSQL with backups:
+   ```
+   docker-compose --profile postgres --profile postgres-backup up -d
+   ```
+
+   For development mode with hot reloading:
+   ```
+   docker-compose --profile dev up -d
+   ```
+
+   For development mode with Docker PostgreSQL:
+   ```
+   docker-compose --profile dev --profile postgres up -d
+   ```
+
 The `docker-compose.yml` file is configured to load environment variables from the `.env` file. If a variable is not defined in the `.env` file, it will use the default value specified in the `docker-compose.yml` file.
+
+### Database Options
+
+#### Using Host PostgreSQL
+
+By default, the application is configured to connect to a PostgreSQL database running on your host machine. This is useful for development or when you already have a PostgreSQL server running.
+
+To use host PostgreSQL:
+1. Ensure PostgreSQL is installed and running on your host
+2. Set `USE_DOCKER_POSTGRES=false` in your `.env` file
+3. Configure `POSTGRES_URL` to point to your host PostgreSQL instance
+4. Run `docker-compose up -d`
+
+#### Using Docker PostgreSQL
+
+Alternatively, you can use a PostgreSQL container managed by Docker Compose:
+
+1. Set `USE_DOCKER_POSTGRES=true` in your `.env` file
+2. Run `docker-compose --profile postgres up -d`
+
+### Data Persistence and Backup
+
+The Docker Compose configuration includes data persistence and optional automated backup for PostgreSQL:
+
+#### Data Persistence
+
+PostgreSQL data is stored in a named volume (`postgres_data`) that persists across container restarts and updates. This ensures your data is not lost when containers are recreated.
+
+```yaml
+volumes:
+  postgres_data:
+    driver: local
+```
+
+#### Automated Backups
+
+The configuration includes an optional automated backup mechanism for PostgreSQL:
+
+1. Set `ENABLE_BACKUP=true` in your `.env` file
+2. Run with the postgres-backup profile: `docker-compose --profile postgres --profile postgres-backup up -d`
+
+The backup system:
+1. Uses a dedicated `postgres_backup` service that runs alongside the main PostgreSQL service
+2. Schedules backups using cron (default: daily at midnight)
+3. Stores backup files in a separate volume (`postgres_backup`)
+4. Applies a retention policy to automatically remove backups older than the specified retention period (default: 7 days)
+
+You can customize the backup behavior using these environment variables:
+
+- `BACKUP_SCHEDULE`: Cron expression for backup schedule (default: `0 0 * * *` - daily at midnight)
+- `BACKUP_RETENTION_DAYS`: Number of days to keep backups (default: 7)
+
+Example backup schedule configurations:
+- Daily at midnight: `0 0 * * *`
+- Every 6 hours: `0 */6 * * *`
+- Weekly on Sunday at 1am: `0 1 * * 0`
+
+### Development Mode with Hot Reloading
+
+The project includes a development mode with hot reloading, which automatically rebuilds and restarts the application when source code changes are detected. This is useful for rapid development and testing.
+
+To use development mode:
+
+1. Set `ENABLE_DEV_MODE=true` in your `.env` file
+2. Run with the dev profile: `docker-compose --profile dev up -d`
+
+The development mode:
+1. Uses a dedicated `app-dev` service that runs with hot reloading enabled
+2. Mounts the project directory as a volume, so changes to source code are immediately available inside the container
+3. Uses the Air tool to watch for file changes and automatically rebuild/restart the application
+4. Provides real-time feedback on build success or errors
+
+You can customize the hot reloading behavior by modifying the `.air.toml` configuration file.
+
+Benefits of development mode:
+- Faster development cycles - no need to manually rebuild and restart containers
+- Immediate feedback on code changes
+- Preserves your database data between restarts
+- Works with both host PostgreSQL and Docker PostgreSQL
 
 ## Testing
 
@@ -236,21 +345,26 @@ go test ./handlers -run TestAPIKeyMiddleware
 
 ### Integration Tests
 
-Some tests are marked as integration tests and are skipped by default because they require a running database or cache. To run these tests, you need to:
+The project uses [testcontainers-go](https://github.com/testcontainers/testcontainers-go) for integration testing. This allows the tests to spin up Docker containers for PostgreSQL and Redis/Valkey on demand, run the tests against them, and then clean up automatically.
 
-1. Set up a test database and cache
-2. Remove the `t.Skip()` line from the test
-3. Run the test with the appropriate connection parameters
-
-For example, to run the PostgreSQL repository integration test:
+To run the integration tests:
 
 ```
-# Set up a test database
-createdb urlshortener_test
-
-# Run the test
+# Run all integration tests
 go test ./store -run TestPostgresRepository_Integration
+go test ./store -run TestCacheRepository_Integration
 ```
+
+Requirements for running integration tests:
+- Docker must be installed and running
+- The Docker API must be accessible to the user running the tests
+
+The testcontainers approach eliminates the need to:
+- Set up separate test databases or caches
+- Modify test files to enable/disable tests
+- Manage test infrastructure manually
+
+This makes the integration tests more reliable, isolated, and easier to run in CI/CD environments.
 
 ### Test Coverage
 

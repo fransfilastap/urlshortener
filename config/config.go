@@ -1,9 +1,12 @@
 package config
 
 import (
+	"github.com/labstack/gommon/log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 // Config holds the application configuration
@@ -29,6 +32,13 @@ type Config struct {
 
 // NewConfig creates a new configuration with values from environment variables
 func NewConfig() *Config {
+	// Try to load .env file, ignore error if file doesn't exist
+	err := godotenv.Load()
+
+	if err != nil {
+		log.Warn(err)
+	}
+
 	return &Config{
 		// Server settings
 		ServerPort: getEnv("SERVER_PORT", "8080"),

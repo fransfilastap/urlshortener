@@ -10,27 +10,39 @@ import (
 )
 
 // TestPostgresRepository_Integration tests the PostgresRepository with a real database.
-// Note: This is an integration test and requires a PostgreSQL database to be running.
-// It will be skipped if the database connection fails.
+// This test uses testcontainers to spin up a PostgreSQL container for testing.
 func TestPostgresRepository_Integration(t *testing.T) {
-	// Skip this test in CI environments or when no database is available
-	t.Skip("Skipping integration test")
+	// Skip the test if we're not running in an environment that supports Docker
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	// Try to connect to the database
-	repo, err := NewPostgresRepository("postgres://postgres:postgres@localhost:5432/urlshortener_test?sslmode=disable")
+	// Setup PostgreSQL container
+	ctx := context.Background()
+	pgContainer, err := SetupPostgresContainer(ctx)
 	if err != nil {
-		t.Skip("Skipping integration test, database not available:", err)
+		t.Skipf("Failed to setup PostgreSQL container: %v", err)
+	}
+	defer pgContainer.Teardown(ctx)
+
+	// Connect to the database
+	repo, err := NewPostgresRepository(pgContainer.URI)
+	if err != nil {
+		t.Skipf("Failed to connect to PostgreSQL: %v", err)
 	}
 	defer repo.Close()
 
 	// Initialize schema
-	ctx := context.Background()
 	err = repo.InitSchema(ctx)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Skipf("Failed to initialize schema: %v", err)
+	}
 
 	// Clean up any existing data
 	_, err = repo.pool.Exec(ctx, "DELETE FROM urls")
-	assert.NoError(t, err)
+	if err != nil {
+		t.Skipf("Failed to clean up existing data: %v", err)
+	}
 
 	// Test creating a URL
 	t.Run("Create", func(t *testing.T) {

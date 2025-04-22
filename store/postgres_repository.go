@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fransfilastap/urlshortener/models"
@@ -16,14 +17,48 @@ type PostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
-// NewPostgresRepository creates a new PostgreSQL repository
+// NewPostgresRepository creates a new PostgreSQL repository with connection retry
 func NewPostgresRepository(connString string) (*PostgresRepository, error) {
-	pool, err := pgxpool.New(context.Background(), connString)
+	// Print connection string for debugging
+	fmt.Printf("Using connection string: %s\n", connString)
+
+	// Create the connection pool with a simple configuration
+	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	return &PostgresRepository{pool: pool}, nil
+	// Set a longer connection timeout
+	config.ConnConfig.ConnectTimeout = 10 * time.Second
+
+	// Retry parameters
+	maxRetries := 5
+	retryDelay := 3 * time.Second
+	var pool *pgxpool.Pool
+
+	// Retry loop for connection
+	for i := 0; i < maxRetries; i++ {
+		// Create the connection pool
+		pool, err = pgxpool.NewWithConfig(context.Background(), config)
+		if err == nil {
+			// Test the connection
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			err = pool.Ping(ctx)
+			cancel()
+
+			if err == nil {
+				fmt.Printf("Successfully connected to database on attempt %d\n", i+1)
+				return &PostgresRepository{pool: pool}, nil
+			}
+			pool.Close()
+		}
+
+		fmt.Printf("Failed to connect to database (attempt %d/%d): %v. Retrying in %v...\n",
+			i+1, maxRetries, err, retryDelay)
+		time.Sleep(retryDelay)
+	}
+
+	return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
 }
 
 // InitSchema initializes the database schema
