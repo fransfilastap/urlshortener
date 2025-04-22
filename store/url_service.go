@@ -43,19 +43,6 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 		return nil, ErrInvalidURL
 	}
 
-	// Check if URL already exists
-	existingURL, err := s.GetByOriginal(ctx, originalURL)
-	if err == nil {
-		log.Info().
-			Str("original_url", originalURL).
-			Str("short", existingURL.Short).
-			Msg("URL already exists, returning existing short URL")
-		return existingURL, nil
-	} else if !errors.Is(err, ErrURLNotFound) {
-		log.Error().Err(err).Str("url", originalURL).Msg("Error checking if URL exists")
-		return nil, err
-	}
-
 	// Generate short URL if not provided
 	short := customShort
 	if short == "" {
@@ -90,7 +77,8 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 
 	// Save to database
 	log.Debug().Str("short", short).Msg("Saving URL to database")
-	if err := s.db.Create(ctx, newURL); err != nil {
+	createdURL, err := s.db.Create(ctx, newURL)
+	if err != nil {
 		log.Error().Err(err).Str("short", short).Msg("Failed to save URL to database")
 		return nil, err
 	}
@@ -98,7 +86,7 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 	// Cache the URL
 	if s.cache != nil {
 		log.Debug().Str("short", short).Msg("Caching URL")
-		err := s.cache.Set(ctx, newURL)
+		err := s.cache.Set(ctx, createdURL)
 		if err != nil {
 			return nil, err
 		}
@@ -108,9 +96,10 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 		Str("original_url", originalURL).
 		Str("short", short).
 		Time("expires_at", expiresAt).
+		Int64("id", createdURL.ID).
 		Msg("Short URL created successfully")
 
-	return newURL, nil
+	return createdURL, nil
 }
 
 // GetByShort retrieves a URL by its short code
@@ -558,6 +547,7 @@ func (s *URLService) RecordClick(ctx context.Context, short string, ip, location
 
 	// Store click data
 	if err := s.db.StoreClick(ctx, click); err != nil {
+		log.Error().Int64("XXXXXXXXXX=====>", shortURL.ID).Msg("Getting click analytics data")
 		log.Error().Err(err).Str("short", short).Msg("Failed to store click analytics")
 		return err
 	}

@@ -107,23 +107,29 @@ func (r *PostgresRepository) InitSchema(ctx context.Context) error {
 	return err
 }
 
-// Create stores a new URL
-func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) error {
+// Create stores a new URL and returns the created URL with all fields
+func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) (*models.URL, error) {
 	// Check if short URL already exists
 	var exists bool
 	err := r.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM urls WHERE short = $1 AND deleted_at IS NULL)", url.Short).Scan(&exists)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if exists {
-		return ErrURLExists
+		return nil, ErrURLExists
 	}
 
-	// Insert new URL
-	_, err = r.pool.Exec(ctx,
-		"INSERT INTO urls (original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-		url.Original, url.Short, url.Title, url.CreatedAt, url.ExpiresAt, url.Clicks, url.CreatorReference, url.DeletedAt)
-	return err
+	// Insert new URL and return all fields including the generated ID
+	var createdURL models.URL
+	err = r.pool.QueryRow(ctx,
+		"INSERT INTO urls (original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at",
+		url.Original, url.Short, url.Title, url.CreatedAt, url.ExpiresAt, url.Clicks, url.CreatorReference, url.DeletedAt).
+		Scan(&createdURL.ID, &createdURL.Original, &createdURL.Short, &createdURL.Title, &createdURL.CreatedAt, &createdURL.ExpiresAt, &createdURL.Clicks, &createdURL.CreatorReference, &createdURL.DeletedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &createdURL, nil
 }
 
 // GetByShort retrieves a URL by its short code

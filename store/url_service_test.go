@@ -15,9 +15,12 @@ type MockURLRepository struct {
 	mock.Mock
 }
 
-func (m *MockURLRepository) Create(ctx context.Context, url *models.URL) error {
+func (m *MockURLRepository) Create(ctx context.Context, url *models.URL) (*models.URL, error) {
 	args := m.Called(ctx, url)
-	return args.Error(0)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.URL), args.Error(1)
 }
 
 func (m *MockURLRepository) GetByShort(ctx context.Context, short string) (*models.URL, error) {
@@ -161,7 +164,12 @@ func TestCreateShortURL(t *testing.T) {
 		// Mock repository behavior
 		mockRepo.On("GetByOriginal", ctx, originalURL).Return(nil, ErrURLNotFound)
 		mockRepo.On("GetByShort", ctx, customShort).Return(nil, ErrURLNotFound)
-		mockRepo.On("Create", ctx, mock.AnythingOfType("*models.URL")).Return(nil)
+		mockRepo.On("Create", ctx, mock.AnythingOfType("*models.URL")).Return(func(ctx context.Context, url *models.URL) *models.URL {
+			// Return the same URL but with an ID set
+			createdURL := *url
+			createdURL.ID = 1 // Set a dummy ID
+			return &createdURL
+		}, nil)
 		mockCache.On("GetByOriginal", ctx, originalURL).Return(nil, ErrURLNotFound)
 		mockCache.On("GetByShort", ctx, customShort).Return(nil, ErrURLNotFound)
 		mockCache.On("Set", ctx, mock.AnythingOfType("*models.URL")).Return(nil)

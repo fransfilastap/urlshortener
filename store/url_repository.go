@@ -20,8 +20,8 @@ var (
 
 // URLRepository defines the interface for URL storage operations
 type URLRepository interface {
-	// Create stores a new URL
-	Create(ctx context.Context, url *models.URL) error
+	// Create stores a new URL and returns the created URL with all fields
+	Create(ctx context.Context, url *models.URL) (*models.URL, error)
 	// GetByShort retrieves a URL by its short code
 	GetByShort(ctx context.Context, short string) (*models.URL, error)
 	// GetByOriginal retrieves a URL by its original URL
