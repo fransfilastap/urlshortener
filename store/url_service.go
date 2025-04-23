@@ -547,7 +547,6 @@ func (s *URLService) RecordClick(ctx context.Context, short string, ip, location
 
 	// Store click data
 	if err := s.db.StoreClick(ctx, click); err != nil {
-		log.Error().Int64("XXXXXXXXXX=====>", shortURL.ID).Msg("Getting click analytics data")
 		log.Error().Err(err).Str("short", short).Msg("Failed to store click analytics")
 		return err
 	}

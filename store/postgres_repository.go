@@ -245,6 +245,7 @@ func (r *PostgresRepository) HardDelete(ctx context.Context, short string) error
 
 // StoreClick stores click analytics data
 func (r *PostgresRepository) StoreClick(ctx context.Context, click *models.Click) error {
+	fmt.Printf("Storing click: %+v\n", click)
 	_, err := r.pool.Exec(ctx,
 		"INSERT INTO clicks (url_id, url_short, ip, location, browser, device, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 		click.URLID, click.URLShort, click.IP, click.Location, click.Browser, click.Device, click.Timestamp)

@@ -27,8 +27,10 @@ type ShortenRequest struct {
 type URLResponse struct {
 	OriginalURL      string    `json:"original_url"`
 	ShortURL         string    `json:"short_url"`
+	ShortCode        string    `json:"short_code"`
 	Title            string    `json:"title,omitempty"`
 	ExpiresAt        time.Time `json:"expires_at,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
 	Clicks           int64     `json:"clicks"`
 	CreatorReference string    `json:"creator_reference,omitempty"`
 }
@@ -524,8 +526,10 @@ func (h *URLHandler) GetURLsByCreator(c echo.Context) error {
 		response = append(response, URLResponse{
 			OriginalURL:      url.Original,
 			ShortURL:         shortURL,
+			ShortCode:        url.Short,
 			Title:            url.Title,
 			ExpiresAt:        url.ExpiresAt,
+			CreatedAt:        url.CreatedAt,
 			Clicks:           url.Clicks,
 			CreatorReference: url.CreatorReference,
 		})
