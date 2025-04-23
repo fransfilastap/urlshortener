@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/fransfilastap/urlshortener/models"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func (h *URLHandler) Register(e *echo.Echo) {
 	// Protected endpoints that require API key
 	apiGroup := e.Group("")
 	apiGroup.Use(APIKeyMiddleware(h.apiKey))
-	apiGroup.POST("/shorten", h.ShortenURL)
+	apiGroup.POST("/api/shorten", h.ShortenURL)
 	apiGroup.GET("/api/urls/:code", h.GetURLInfo)
 	apiGroup.PUT("/api/urls/:code", h.UpdateURL)
 	apiGroup.DELETE("/api/urls/:code", h.DeleteURL)
@@ -195,9 +196,42 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 		Str("code", code).
 		Str("original_url", url.Original).
 		Int64("clicks", url.Clicks+1).
-		Msg("Redirecting to original URL")
+		Msg("Serving redirect page for URL")
 
-	// Redirect to original URL
+	// Check if the request accepts HTML
+	if strings.Contains(c.Request().Header.Get("Accept"), "text/html") {
+		// Define template data
+		type TemplateData struct {
+			OriginalURL string
+			ShortURL    string
+			Clicks      int64
+		}
+
+		data := TemplateData{
+			OriginalURL: url.Original,
+			ShortURL:    url.Short,
+			Clicks:      url.Clicks,
+		}
+
+		// Parse the template
+		tmpl, err := template.ParseFiles("static/redirect.html")
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to parse template")
+			return c.Redirect(http.StatusFound, url.Original)
+		}
+
+		// Render the template
+		c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTML)
+		c.Response().WriteHeader(http.StatusOK)
+		if err := tmpl.Execute(c.Response().Writer, data); err != nil {
+			log.Error().Err(err).Msg("Failed to render template")
+			return c.Redirect(http.StatusFound, url.Original)
+		}
+
+		return nil
+	}
+
+	// For non-HTML requests (API clients, etc.), perform a direct redirect
 	return c.Redirect(http.StatusFound, url.Original)
 }
 

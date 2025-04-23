@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.23.3
 
 require (
+	github.com/a-h/templ v0.2.598
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/redis/go-redis/v9 v9.4.0

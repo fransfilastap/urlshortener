@@ -56,6 +56,9 @@ func main() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
+	// Serve static files
+	e.Static("/static", "static")
+
 	// Initialize handlers
 	urlHandler := handlers.NewURLHandler(urlService, cfg.BaseURL, cfg.APIKey)
 	urlHandler.Register(e)
