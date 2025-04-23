@@ -1,72 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting...</title>
-    <!-- Tailwind CSS v4 -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Redirecting</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-    <!-- HTMX -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
-        }
-    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        accent: '#feca04',
+                        bphnblue: '#142452'
+                    }
+                }
+            }
+        };
+    </script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <div class="flex flex-col items-center justify-center min-h-[80vh] fade-in">
-            <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-                <h1 class="text-2xl font-bold text-center mb-4">Redirecting you to:</h1>
-                <div class="bg-gray-100 p-4 rounded mb-6 break-all">
-                    <p id="original-url" class="text-gray-700">{{.OriginalURL}}</p>
-                </div>
-                
-                <div class="flex justify-center mb-6">
-                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-                </div>
-                
-                <p class="text-center text-gray-600 mb-4">You will be redirected automatically in <span id="countdown">3</span> seconds...</p>
-                
-                <div class="flex justify-center">
-                    <a id="redirect-link" href="{{.OriginalURL}}" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
-                        Go Now
-                    </a>
-                </div>
-                
-                <div class="mt-6 text-center text-xs text-gray-500">
-                    <p>Short URL: {{.ShortURL}}</p>
-                    <p>Clicks: {{.Clicks}}</p>
-                </div>
+<body class="bg-white min-h-screen flex flex-col justify-between">
+
+<!-- Header -->
+<header class="px-6 py-4 flex items-center justify-start border-b border-gray-200">
+    <img src="/static/img/logo.svg" alt="Logo" class="h-10">
+</header>
+
+<!-- Main Layout -->
+<main class="flex-1 flex items-center justify-center px-6 py-12">
+    <div class="bg-white rounded shadow-lg p-6 border border-gray-200 max-w-lg w-full">
+        <h1 class="text-sm font-semibold text-gray-700 mb-2">Destination preview</h1>
+
+        <div class="border border-gray-300 rounded mb-4 bg-gray-100 p-4 flex items-center justify-center h-32">
+            <div class="text-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 10h18M3 15h18M3 20h18" />
+                </svg>
+                <p class="text-xs mt-2">No preview available</p>
             </div>
         </div>
+
+        <a id="redirect-link" href="{{.OriginalURL}}" class="block text-blue-600 font-semibold text-sm underline mb-2 break-words">
+            {{.OriginalURL}}
+        </a>
+        <p class="text-sm text-gray-500 mb-6">No description available</p>
+
+        <a id="manual-redirect" href="{{.OriginalURL}}" class="bg-bphnblue hover:bg-[#0e1e3b] text-white text-sm font-medium py-2 px-4 rounded inline-block w-full text-center">
+            Continue to destination →
+        </a>
+
+        <p class="text-center text-xs text-gray-500 mt-4">You'll be redirected in <span id="countdown">4</span> seconds...</p>
     </div>
-    
-    <script>
-        // Client-side redirection
-        document.addEventListener('DOMContentLoaded', () => {
-            const destinationUrl = document.getElementById('original-url').textContent;
-            const redirectLink = document.getElementById('redirect-link');
-            redirectLink.href = destinationUrl;
-            
-            let countdown = 3;
-            const countdownElement = document.getElementById('countdown');
-            
-            const timer = setInterval(() => {
-                countdown--;
-                countdownElement.textContent = countdown;
-                
-                if (countdown <= 0) {
-                    clearInterval(timer);
-                    window.location.href = destinationUrl;
-                }
-            }, 1000);
-        });
-    </script>
+</main>
+
+<!-- Footer -->
+<footer class="bg-bphnblue text-white text-center text-xs py-4">
+    &copy; 2025 All rights reserved.
+</footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const destinationUrl = document.getElementById('redirect-link').textContent;
+        document.getElementById('redirect-link').href = destinationUrl;
+        document.getElementById('manual-redirect').href = destinationUrl;
+
+        let countdown = 4;
+        const countdownElement = document.getElementById('countdown');
+
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            if (countdown <= 0) {
+                clearInterval(timer);
+                window.location.href = destinationUrl;
+            }
+        }, 1000);
+    });
+</script>
 </body>
 </html>
