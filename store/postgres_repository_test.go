@@ -47,8 +47,12 @@ func TestPostgresRepository_Integration(t *testing.T) {
 	// Test creating a URL
 	t.Run("Create", func(t *testing.T) {
 		url := models.NewURL("https://example.com", "test123", "Example Website", time.Now().Add(24*time.Hour), "ABC")
-		err := repo.Create(ctx, url)
+		createdURL, err := repo.Create(ctx, url)
 		assert.NoError(t, err)
+		assert.NotNil(t, createdURL)
+		assert.Equal(t, "https://example.com", createdURL.Original)
+		assert.Equal(t, "test123", createdURL.Short)
+		assert.Equal(t, "Example Website", createdURL.Title)
 	})
 
 	// Test getting a URL by short code
@@ -81,8 +85,9 @@ func TestPostgresRepository_Integration(t *testing.T) {
 	t.Run("StoreClick", func(t *testing.T) {
 		// Create a new URL for testing
 		url := models.NewURL("https://example.com/click", "clicktest", "Click Test", time.Now().Add(24*time.Hour), "ABC")
-		err := repo.Create(ctx, url)
+		createdURL, err := repo.Create(ctx, url)
 		assert.NoError(t, err)
+		assert.NotNil(t, createdURL)
 
 		// Get the URL to get its ID
 		retrievedURL, err := repo.GetByShort(ctx, "clicktest")
