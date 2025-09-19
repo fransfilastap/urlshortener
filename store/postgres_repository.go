@@ -177,7 +177,7 @@ func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string)
 // GetByCreator retrieves URLs by their creator reference
 func (r *PostgresRepository) GetByCreator(ctx context.Context, creatorReference string) ([]*models.URL, error) {
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at FROM urls WHERE creator_reference = $1 AND deleted_at IS NULL",
+		"SELECT id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at FROM urls WHERE creator_reference = $1 AND deleted_at IS NULL ORDER BY created_at DESC",
 		creatorReference)
 	if err != nil {
 		return nil, err
