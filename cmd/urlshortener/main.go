@@ -124,8 +124,9 @@ func runServer() {
 	e.POST("/auth/logout", authHandler.Logout)
 	e.GET("/auth/me", authHandler.Me)
 
-	// Public redirect endpoint
+	// Public landing page and redirect endpoints
 	urlHandler := handler.NewURLHandler(urlService, cfg.BaseURL, cfg.APIKey)
+	e.GET("/", urlHandler.Index)
 	e.GET("/:code", urlHandler.RedirectURL)
 
 	// API endpoints — dual auth (session cookie OR API key header)

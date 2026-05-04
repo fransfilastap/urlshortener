@@ -95,6 +95,16 @@ func NewURLHandler(service URLServicer, baseURL string, apiKey string) *URLHandl
 	}
 }
 
+func (h *URLHandler) Index(c echo.Context) error {
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+	c.Response().WriteHeader(http.StatusOK)
+	if err := indexTmpl.Execute(c.Response().Writer, nil); err != nil {
+		log.Error().Err(err).Msg("Failed to render index page")
+		return c.String(http.StatusInternalServerError, "Internal Server Error")
+	}
+	return nil
+}
+
 func (h *URLHandler) ShortenURL(c echo.Context) error {
 	var req ShortenRequest
 	if err := c.Bind(&req); err != nil {
