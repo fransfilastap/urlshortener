@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -74,6 +75,15 @@ func main() {
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	// Serve SPA (admin dashboard)
+	if handler.IsDistDirPresent() {
+		handler.RegisterSPA(e, urlshortener.DistFS)
+	}
+
+	// Serve static assets (logo, etc)
+	staticFS, _ := fs.Sub(urlshortener.StaticFS, "static")
+	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static", http.FileServer(http.FS(staticFS)))))
 
 	go func() {
 		if err := e.Start(":" + cfg.ServerPort); err != nil && err != http.ErrServerClosed {
