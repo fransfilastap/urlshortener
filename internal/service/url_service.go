@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"net/url"
 	"strings"
 	"time"
 
@@ -35,9 +34,9 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 		Str("creator_reference", creatorReference).
 		Msg("Creating short URL")
 
-	if _, err := url.ParseRequestURI(originalURL); err != nil {
+	if err := ValidateURL(originalURL); err != nil {
 		log.Error().Err(err).Str("url", originalURL).Msg("Invalid URL format")
-		return nil, domain.ErrInvalidURL
+		return nil, err
 	}
 
 	short := customShort
@@ -50,6 +49,10 @@ func (s *URLService) CreateShortURL(ctx context.Context, originalURL string, cus
 			return nil, err
 		}
 	} else {
+		if err := ValidateShortCode(short); err != nil {
+			log.Error().Err(err).Str("custom_short", short).Msg("Invalid custom short code")
+			return nil, err
+		}
 		_, err := s.GetByShort(ctx, short)
 		if err == nil {
 			log.Error().Str("custom_short", short).Msg("Custom short code already in use")
@@ -297,9 +300,9 @@ func (s *URLService) UpdateURL(ctx context.Context, short string, title, origina
 	}
 
 	if originalURL != existingURL.Original {
-		if _, err := url.ParseRequestURI(originalURL); err != nil {
+		if err := ValidateURL(originalURL); err != nil {
 			log.Error().Err(err).Str("url", originalURL).Msg("Invalid URL format")
-			return nil, domain.ErrInvalidURL
+			return nil, err
 		}
 	}
 
@@ -362,9 +365,9 @@ func (s *URLService) UpdateURLWithCreator(ctx context.Context, short string, tit
 	}
 
 	if originalURL != existingURL.Original {
-		if _, err := url.ParseRequestURI(originalURL); err != nil {
+		if err := ValidateURL(originalURL); err != nil {
 			log.Error().Err(err).Str("url", originalURL).Msg("Invalid URL format")
-			return nil, domain.ErrInvalidURL
+			return nil, err
 		}
 	}
 

@@ -110,18 +110,28 @@ func runServer() {
 	defer cache.Close()
 
 	urlService := service.NewURLService(db, cache)
-	sessionStore := handler.GetSessionStore(cfg.SessionSecret, cfg.SessionMaxAge)
-	authHandler := handler.NewAuthHandler(sessionStore, cfg.APIKey)
+	sessionStore := handler.GetSessionStore(cfg.SessionSecret, cfg.SessionMaxAge, cfg.SecureCookies)
+	authHandler := handler.NewAuthHandler(sessionStore, cfg.APIKey, cfg.SecureCookies)
 
 	e := echo.New()
 	e.HTTPErrorHandler = handler.CustomHTTPErrorHandler
 
 	e.Use(logger.EchoLogger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	e.Use(handler.SecurityHeadersMiddleware())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, "X-API-Key"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	loginRateLimiter := handler.NewRateLimiter(5, time.Minute)
+	apiRateLimiter := handler.NewRateLimiter(cfg.RateLimit, time.Minute)
 
 	// Auth endpoints
-	e.POST("/auth/login", authHandler.Login)
+	e.POST("/auth/login", authHandler.Login, handler.RateLimitMiddleware(loginRateLimiter))
 	e.POST("/auth/logout", authHandler.Logout)
 	e.GET("/auth/me", authHandler.Me)
 
@@ -133,6 +143,7 @@ func runServer() {
 	// API endpoints — dual auth (session cookie OR API key header)
 	apiGroup := e.Group("")
 	apiGroup.Use(handler.SessionOrAPIKeyMiddleware(sessionStore, cfg.APIKey))
+	apiGroup.Use(handler.RateLimitMiddleware(apiRateLimiter))
 	apiGroup.POST("/api/shorten", urlHandler.ShortenURL)
 	apiGroup.GET("/api/urls/:code", urlHandler.GetURLInfo)
 	apiGroup.PUT("/api/urls/:code", urlHandler.UpdateURL)

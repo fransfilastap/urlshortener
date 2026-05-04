@@ -51,14 +51,13 @@ type ShortenRequest struct {
 }
 
 type URLResponse struct {
-	OriginalURL      string    `json:"original_url"`
-	ShortURL         string    `json:"short_url"`
-	ShortCode        string    `json:"short_code"`
-	Title            string    `json:"title,omitempty"`
-	ExpiresAt        time.Time `json:"expires_at,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
-	Clicks           int64     `json:"clicks"`
-	CreatorReference string    `json:"creator_reference,omitempty"`
+	OriginalURL string    `json:"original_url"`
+	ShortURL    string    `json:"short_url"`
+	ShortCode   string    `json:"short_code,omitempty"`
+	Title       string    `json:"title,omitempty"`
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time `json:"created_at,omitempty"`
+	Clicks      int64     `json:"clicks"`
 }
 
 type UpdateURLRequest struct {
@@ -145,12 +144,11 @@ func (h *URLHandler) ShortenURL(c echo.Context) error {
 		Msg("URL shortened successfully")
 
 	return c.JSON(http.StatusCreated, URLResponse{
-		OriginalURL:      url.Original,
-		ShortURL:         shortURL,
-		Title:            url.Title,
-		ExpiresAt:        url.ExpiresAt,
-		Clicks:           url.Clicks,
-		CreatorReference: url.CreatorReference,
+		OriginalURL: url.Original,
+		ShortURL:    shortURL,
+		Title:       url.Title,
+		ExpiresAt:   url.ExpiresAt,
+		Clicks:      url.Clicks,
 	})
 }
 
@@ -184,11 +182,13 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve URL"})
 	}
 
+	ipAddr := c.RealIP()
+	userAgentStr := c.Request().UserAgent()
+
 	go func() {
 		ctx := context.Background()
-		req := c.Request()
-		ip := c.RealIP()
-		userAgent := req.UserAgent()
+		ip := ipAddr
+		userAgent := userAgentStr
 
 		var browser, device string
 		if strings.Contains(userAgent, "Mozilla") {
@@ -215,7 +215,7 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 
 		location := "Unknown"
 
-		err := h.service.RecordClick(ctx, code, ip, location, browser, device)
+		err := h.service.RecordClick(ctx, code, HashIP(ip), location, browser, device)
 		if err != nil {
 			if errors.Is(err, domain.ErrRecentClick) {
 				log.Debug().Str("code", code).Msg("Recent click from the same visitor, not incrementing click count")
@@ -236,8 +236,13 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 		Msg("Serving redirect page for URL")
 
 	if strings.Contains(c.Request().Header.Get("Accept"), "text/html") {
+		safeURL := SanitizeDisplayURL(url.Original)
+		if safeURL == "" {
+			safeURL = url.Original
+		}
+
 		data := TemplateData{
-			OriginalURL: url.Original,
+			OriginalURL: safeURL,
 			ShortURL:    url.Short,
 			Clicks:      url.Clicks,
 		}
@@ -285,12 +290,11 @@ func (h *URLHandler) GetURLInfo(c echo.Context) error {
 		Msg("URL info retrieved")
 
 	return c.JSON(http.StatusOK, URLResponse{
-		OriginalURL:      url.Original,
-		ShortURL:         shortURL,
-		Title:            url.Title,
-		ExpiresAt:        url.ExpiresAt,
-		Clicks:           url.Clicks,
-		CreatorReference: url.CreatorReference,
+		OriginalURL: url.Original,
+		ShortURL:    shortURL,
+		Title:       url.Title,
+		ExpiresAt:   url.ExpiresAt,
+		Clicks:      url.Clicks,
 	})
 }
 
@@ -374,12 +378,11 @@ func (h *URLHandler) UpdateURL(c echo.Context) error {
 		Msg("URL updated successfully")
 
 	return c.JSON(http.StatusOK, URLResponse{
-		OriginalURL:      updatedURL.Original,
-		ShortURL:         shortURL,
-		Title:            updatedURL.Title,
-		ExpiresAt:        updatedURL.ExpiresAt,
-		Clicks:           updatedURL.Clicks,
-		CreatorReference: updatedURL.CreatorReference,
+		OriginalURL: updatedURL.Original,
+		ShortURL:    shortURL,
+		Title:       updatedURL.Title,
+		ExpiresAt:   updatedURL.ExpiresAt,
+		Clicks:      updatedURL.Clicks,
 	})
 }
 
@@ -462,17 +465,30 @@ func (h *URLHandler) GetURLAnalytics(c echo.Context) error {
 		clicks = clicks[:maxClicks]
 	}
 
+	maskedClicks := make([]*domain.Click, len(clicks))
+	for i, click := range clicks {
+		maskedClicks[i] = &domain.Click{
+			ID:       click.ID,
+			URLID:    click.URLID,
+			URLShort: click.URLShort,
+			IP:       MaskIP(click.IP),
+			Location: click.Location,
+			Browser:  click.Browser,
+			Device:   click.Device,
+			Timestamp: click.Timestamp,
+		}
+	}
+
 	result := map[string]interface{}{
 		"url": URLResponse{
-			OriginalURL:      url.Original,
-			ShortURL:         h.baseURL + "/" + url.Short,
-			Title:            url.Title,
-			ExpiresAt:        url.ExpiresAt,
-			Clicks:           url.Clicks,
-			CreatorReference: url.CreatorReference,
+			OriginalURL: url.Original,
+			ShortURL:    h.baseURL + "/" + url.Short,
+			Title:       url.Title,
+			ExpiresAt:   url.ExpiresAt,
+			Clicks:      url.Clicks,
 		},
 		"analytics":     analytics,
-		"recent_clicks": clicks,
+		"recent_clicks": maskedClicks,
 	}
 
 	log.Info().
@@ -507,14 +523,13 @@ func (h *URLHandler) GetURLsByCreator(c echo.Context) error {
 	for _, url := range urls {
 		shortURL := h.baseURL + "/" + url.Short
 		response = append(response, URLResponse{
-			OriginalURL:      url.Original,
-			ShortURL:         shortURL,
-			ShortCode:        url.Short,
-			Title:            url.Title,
-			ExpiresAt:        url.ExpiresAt,
-			CreatedAt:        url.CreatedAt,
-			Clicks:           url.Clicks,
-			CreatorReference: url.CreatorReference,
+			OriginalURL: url.Original,
+			ShortURL:    shortURL,
+			ShortCode:   url.Short,
+			Title:       url.Title,
+			ExpiresAt:   url.ExpiresAt,
+			CreatedAt:   url.CreatedAt,
+			Clicks:      url.Clicks,
 		})
 	}
 

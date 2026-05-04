@@ -1,17 +1,19 @@
 package handler
 
 import (
+	"crypto/subtle"
 	"net/http"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo/v4"
+	"github.com/rs/zerolog/log"
 )
 
 func APIKeyMiddleware(apiKey string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			key := c.Request().Header.Get("X-API-Key")
-			if key == "" || key != apiKey {
+			if key == "" || subtle.ConstantTimeCompare([]byte(key), []byte(apiKey)) != 1 {
 				return c.JSON(http.StatusUnauthorized, map[string]string{
 					"error": "Invalid or missing API key",
 				})
@@ -26,16 +28,17 @@ func SessionOrAPIKeyMiddleware(store *sessions.CookieStore, apiKey string) echo.
 		return func(c echo.Context) error {
 			key := c.Request().Header.Get("X-API-Key")
 			if key != "" {
-				if key == apiKey {
-					return next(c)
+				if subtle.ConstantTimeCompare([]byte(key), []byte(apiKey)) != 1 {
+					return c.JSON(http.StatusUnauthorized, map[string]string{
+						"error": "Invalid or missing API key",
+					})
 				}
-				return c.JSON(http.StatusUnauthorized, map[string]string{
-					"error": "Invalid or missing API key",
-				})
+				return next(c)
 			}
 
 			session, err := store.Get(c.Request(), sessionName)
 			if err != nil {
+				log.Debug().Err(err).Msg("Failed to get session")
 				return c.JSON(http.StatusUnauthorized, map[string]string{
 					"error": "Invalid session",
 				})

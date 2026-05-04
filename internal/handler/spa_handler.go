@@ -25,6 +25,9 @@ func RegisterSPA(e *echo.Echo, distFS fs.FS) {
 
 	e.GET("/admin/*", func(c echo.Context) error {
 		path := c.Param("*")
+		if strings.Contains(path, "..") {
+			return c.String(http.StatusBadRequest, "Invalid path")
+		}
 		if path != "" && !strings.HasSuffix(path, "/") {
 			if f, err := staticFS.Open(path); err == nil {
 				f.Close()

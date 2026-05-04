@@ -10,8 +10,9 @@ services:
     environment:
       - SERVER_PORT=${SERVER_PORT:-8080}
       - BASE_URL=${BASE_URL:-http://localhost:8080}
-      - API_KEY=${API_KEY:-your-api-key-here}
-      - POSTGRES_URL=${POSTGRES_URL:-postgres://postgres:postgres@postgres:5432/urlshortener?sslmode=disable}
+      - API_KEY=${API_KEY:?API_KEY must be set}
+      - POSTGRES_URL=${POSTGRES_URL:?POSTGRES_URL must be set}
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET must be set}
       - VALKEY_ADDR=${VALKEY_ADDR:-valkey:6379}
       - VALKEY_PASSWORD=${VALKEY_PASSWORD:-}
       - VALKEY_DB=${VALKEY_DB:-0}
@@ -20,6 +21,9 @@ services:
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - AUTO_MIGRATE=${AUTO_MIGRATE:-false}
       - EXPECTED_SCHEMA_VERSION=${EXPECTED_SCHEMA_VERSION:-1}
+      - SECURE_COOKIES=${SECURE_COOKIES:-true}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+      - RATE_LIMIT=${RATE_LIMIT:-100}
     depends_on:
       - postgres
       - valkey
@@ -36,14 +40,18 @@ services:
     environment:
       - SERVER_PORT=${SERVER_PORT:-8080}
       - BASE_URL=${BASE_URL:-http://localhost:8080}
-      - API_KEY=${API_KEY:-your-api-key-here}
-      - POSTGRES_URL=${POSTGRES_URL:-postgres://postgres:postgres@postgres:5432/urlshortener?sslmode=disable}
+      - API_KEY=${API_KEY:?API_KEY must be set}
+      - POSTGRES_URL=${POSTGRES_URL:?POSTGRES_URL must be set}
+      - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET must be set}
       - VALKEY_ADDR=${VALKEY_ADDR:-valkey:6379}
       - VALKEY_PASSWORD=${VALKEY_PASSWORD:-}
       - VALKEY_DB=${VALKEY_DB:-0}
       - VALKEY_TTL=${VALKEY_TTL:-24h}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      - SECURE_COOKIES=${SECURE_COOKIES:-true}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+      - RATE_LIMIT=${RATE_LIMIT:-100}
     volumes:
       - .:/app
     depends_on:

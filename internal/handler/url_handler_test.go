@@ -139,12 +139,11 @@ func (h *TestURLHandler) ShortenURL(c echo.Context) error {
 	shortURL := h.baseURL + "/" + url.Short
 
 	return c.JSON(http.StatusCreated, URLResponse{
-		OriginalURL:      url.Original,
-		ShortURL:         shortURL,
-		Title:            url.Title,
-		ExpiresAt:        url.ExpiresAt,
-		Clicks:           url.Clicks,
-		CreatorReference: url.CreatorReference,
+		OriginalURL: url.Original,
+		ShortURL:    shortURL,
+		Title:       url.Title,
+		ExpiresAt:   url.ExpiresAt,
+		Clicks:      url.Clicks,
 	})
 }
 
@@ -182,12 +181,11 @@ func (h *TestURLHandler) GetURLInfo(c echo.Context) error {
 	shortURL := h.baseURL + "/" + url.Short
 
 	return c.JSON(http.StatusOK, URLResponse{
-		OriginalURL:      url.Original,
-		ShortURL:         shortURL,
-		Title:            url.Title,
-		ExpiresAt:        url.ExpiresAt,
-		Clicks:           url.Clicks,
-		CreatorReference: url.CreatorReference,
+		OriginalURL: url.Original,
+		ShortURL:    shortURL,
+		Title:       url.Title,
+		ExpiresAt:   url.ExpiresAt,
+		Clicks:      url.Clicks,
 	})
 }
 
@@ -273,7 +271,6 @@ func TestShortenURL(t *testing.T) {
 		assert.Equal(t, "http://localhost:8080/custom", response.ShortURL)
 		assert.Equal(t, "Example", response.Title)
 		assert.Equal(t, int64(0), response.Clicks)
-		assert.Equal(t, "test-user", response.CreatorReference)
 
 		mockService.AssertExpectations(t)
 	})
@@ -392,7 +389,6 @@ func TestGetURLInfo(t *testing.T) {
 		assert.Equal(t, "http://localhost:8080/abc123", response.ShortURL)
 		assert.Equal(t, "Example", response.Title)
 		assert.Equal(t, int64(10), response.Clicks)
-		assert.Equal(t, "test-user", response.CreatorReference)
 
 		mockService.AssertExpectations(t)
 	})
@@ -563,6 +559,6 @@ func TestIndexHandler(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Perpendek")
+	assert.Contains(t, rec.Body.String(), "Shorten")
 	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
 }

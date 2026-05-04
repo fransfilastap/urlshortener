@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -242,7 +243,7 @@ func TestCreateShortURL(t *testing.T) {
 		url, err := svc.CreateShortURL(ctx, "invalid-url", "", "", time.Duration(0), "")
 
 		assert.Error(t, err)
-		assert.Equal(t, domain.ErrInvalidURL, err)
+		assert.True(t, errors.Is(err, domain.ErrInvalidURL), "expected ErrInvalidURL, got: %v", err)
 		assert.Nil(t, url)
 	})
 
