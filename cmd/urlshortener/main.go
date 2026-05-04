@@ -114,6 +114,7 @@ func runServer() {
 	authHandler := handler.NewAuthHandler(sessionStore, cfg.APIKey)
 
 	e := echo.New()
+	e.HTTPErrorHandler = handler.CustomHTTPErrorHandler
 
 	e.Use(logger.EchoLogger())
 	e.Use(middleware.Recover())
