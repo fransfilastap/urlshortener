@@ -7,48 +7,40 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fransfilastap/urlshortener/internal/db/sqlc"
 	"github.com/fransfilastap/urlshortener/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresRepository implements URLRepository using PostgreSQL
 type PostgresRepository struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	queries *sqlc.Queries
 }
 
-// NewPostgresRepository creates a new PostgreSQL repository with connection retry
 func NewPostgresRepository(connString string) (*PostgresRepository, error) {
-	// Print connection string for debugging
-	fmt.Printf("Using connection string: %s\n", connString)
-
-	// Create the connection pool with a simple configuration
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	// Set a longer connection timeout
 	config.ConnConfig.ConnectTimeout = 10 * time.Second
 
-	// Retry parameters
 	maxRetries := 5
 	retryDelay := 3 * time.Second
 	var pool *pgxpool.Pool
 
-	// Retry loop for connection
 	for i := 0; i < maxRetries; i++ {
-		// Create the connection pool
 		pool, err = pgxpool.NewWithConfig(context.Background(), config)
 		if err == nil {
-			// Test the connection
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			err = pool.Ping(ctx)
 			cancel()
 
 			if err == nil {
-				fmt.Printf("Successfully connected to database on attempt %d\n", i+1)
-				return &PostgresRepository{pool: pool}, nil
+				queries := sqlc.New(pool)
+				return &PostgresRepository{pool: pool, queries: queries}, nil
 			}
 			pool.Close()
 		}
@@ -61,55 +53,94 @@ func NewPostgresRepository(connString string) (*PostgresRepository, error) {
 	return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
 }
 
-// InitSchema initializes the database schema
-func (r *PostgresRepository) InitSchema(ctx context.Context) error {
-	_, err := r.pool.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS urls (
-			id SERIAL PRIMARY KEY,
-			original TEXT NOT NULL,
-			short TEXT NOT NULL UNIQUE,
-			title TEXT,
-			created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-			expires_at TIMESTAMP,
-			clicks BIGINT NOT NULL DEFAULT 0,
-			creator_reference TEXT,
-			deleted_at TIMESTAMP
-		);
-		CREATE INDEX IF NOT EXISTS idx_urls_short ON urls(short);
-		CREATE INDEX IF NOT EXISTS idx_urls_original ON urls(original);
-
-		CREATE TABLE IF NOT EXISTS clicks (
-			id SERIAL PRIMARY KEY,
-			url_id BIGINT NOT NULL REFERENCES urls(id) ON DELETE CASCADE,
-			url_short TEXT NOT NULL,
-			ip TEXT NOT NULL,
-			location TEXT,
-			browser TEXT,
-			device TEXT,
-			timestamp TIMESTAMP NOT NULL DEFAULT NOW()
-		);
-		CREATE INDEX IF NOT EXISTS idx_clicks_url_id ON clicks(url_id);
-		CREATE INDEX IF NOT EXISTS idx_clicks_url_short ON clicks(url_short);
-
-		CREATE TABLE IF NOT EXISTS url_history (
-			id SERIAL PRIMARY KEY,
-			url_id BIGINT NOT NULL REFERENCES urls(id) ON DELETE CASCADE,
-			url_short TEXT NOT NULL,
-			action TEXT NOT NULL,
-			old_value JSONB,
-			new_value JSONB,
-			modified_at TIMESTAMP NOT NULL DEFAULT NOW(),
-			modified_by TEXT
-		);
-		CREATE INDEX IF NOT EXISTS idx_url_history_url_id ON url_history(url_id);
-		CREATE INDEX IF NOT EXISTS idx_url_history_url_short ON url_history(url_short);
-	`)
-	return err
+func (r *PostgresRepository) Pool() *pgxpool.Pool {
+	return r.pool
 }
 
-// Create stores a new URL and returns the created URL with all fields
+func pgtypeText(s string) pgtype.Text {
+	if s == "" {
+		return pgtype.Text{Valid: false}
+	}
+	return pgtype.Text{String: s, Valid: true}
+}
+
+func pgtypeTimestamp(t time.Time) pgtype.Timestamp {
+	if t.IsZero() {
+		return pgtype.Timestamp{Valid: false}
+	}
+	return pgtype.Timestamp{Time: t, Valid: true}
+}
+
+func pgtypeTimestampPtr(t *time.Time) pgtype.Timestamp {
+	if t == nil {
+		return pgtype.Timestamp{Valid: false}
+	}
+	return pgtype.Timestamp{Time: *t, Valid: true}
+}
+
+func sqlcURLToModel(u sqlc.Url) *models.URL {
+	var expiresAt time.Time
+	if u.ExpiresAt.Valid {
+		expiresAt = u.ExpiresAt.Time
+	}
+
+	var deletedAt *time.Time
+	if u.DeletedAt.Valid {
+		deletedAt = &u.DeletedAt.Time
+	}
+
+	var title string
+	if u.Title.Valid {
+		title = u.Title.String
+	}
+
+	var creatorReference string
+	if u.CreatorReference.Valid {
+		creatorReference = u.CreatorReference.String
+	}
+
+	return &models.URL{
+		ID:               int64(u.ID),
+		Original:         u.Original,
+		Short:            u.Short,
+		Title:            title,
+		CreatedAt:        u.CreatedAt.Time,
+		ExpiresAt:        expiresAt,
+		Clicks:           u.Clicks,
+		CreatorReference: creatorReference,
+		DeletedAt:        deletedAt,
+	}
+}
+
+func sqlcClickToModel(c sqlc.Click) *models.Click {
+	var location string
+	if c.Location.Valid {
+		location = c.Location.String
+	}
+
+	var browser string
+	if c.Browser.Valid {
+		browser = c.Browser.String
+	}
+
+	var device string
+	if c.Device.Valid {
+		device = c.Device.String
+	}
+
+	return &models.Click{
+		ID:        int64(c.ID),
+		URLID:     c.UrlID,
+		URLShort:  c.UrlShort,
+		IP:        c.Ip,
+		Location:  location,
+		Browser:   browser,
+		Device:    device,
+		Timestamp: c.Timestamp.Time,
+	}
+}
+
 func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) (*models.URL, error) {
-	// Check if short URL already exists
 	var exists bool
 	err := r.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM urls WHERE short = $1 AND deleted_at IS NULL)", url.Short).Scan(&exists)
 	if err != nil {
@@ -119,25 +150,25 @@ func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) (*mode
 		return nil, ErrURLExists
 	}
 
-	// Insert new URL and return all fields including the generated ID
-	var createdURL models.URL
-	err = r.pool.QueryRow(ctx,
-		"INSERT INTO urls (original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at",
-		url.Original, url.Short, url.Title, url.CreatedAt, url.ExpiresAt, url.Clicks, url.CreatorReference, url.DeletedAt).
-		Scan(&createdURL.ID, &createdURL.Original, &createdURL.Short, &createdURL.Title, &createdURL.CreatedAt, &createdURL.ExpiresAt, &createdURL.Clicks, &createdURL.CreatorReference, &createdURL.DeletedAt)
+	result, err := r.queries.CreateURL(ctx, sqlc.CreateURLParams{
+		Original:         url.Original,
+		Short:            url.Short,
+		Title:            pgtypeText(url.Title),
+		CreatedAt:        pgtypeTimestamp(url.CreatedAt),
+		ExpiresAt:        pgtypeTimestamp(url.ExpiresAt),
+		Clicks:            url.Clicks,
+		CreatorReference: pgtypeText(url.CreatorReference),
+		DeletedAt:        pgtypeTimestampPtr(url.DeletedAt),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &createdURL, nil
+	return sqlcURLToModel(result), nil
 }
 
-// GetByShort retrieves a URL by its short code
 func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*models.URL, error) {
-	url := &models.URL{}
-	err := r.pool.QueryRow(ctx,
-		"SELECT id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at FROM urls WHERE short = $1 AND deleted_at IS NULL",
-		short).Scan(&url.ID, &url.Original, &url.Short, &url.Title, &url.CreatedAt, &url.ExpiresAt, &url.Clicks, &url.CreatorReference, &url.DeletedAt)
+	result, err := r.queries.GetURLByShort(ctx, short)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrURLNotFound
@@ -145,7 +176,8 @@ func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*mod
 		return nil, err
 	}
 
-	// Check if URL has expired
+	url := sqlcURLToModel(result)
+
 	if !url.ExpiresAt.IsZero() && url.ExpiresAt.Before(time.Now()) {
 		return nil, ErrURLNotFound
 	}
@@ -153,12 +185,8 @@ func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*mod
 	return url, nil
 }
 
-// GetByOriginal retrieves a URL by its original URL
 func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string) (*models.URL, error) {
-	url := &models.URL{}
-	err := r.pool.QueryRow(ctx,
-		"SELECT id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at FROM urls WHERE original = $1 AND deleted_at IS NULL",
-		original).Scan(&url.ID, &url.Original, &url.Short, &url.Title, &url.CreatedAt, &url.ExpiresAt, &url.Clicks, &url.CreatorReference, &url.DeletedAt)
+	result, err := r.queries.GetURLByOriginal(ctx, original)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrURLNotFound
@@ -166,7 +194,8 @@ func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string)
 		return nil, err
 	}
 
-	// Check if URL has expired
+	url := sqlcURLToModel(result)
+
 	if !url.ExpiresAt.IsZero() && url.ExpiresAt.Before(time.Now()) {
 		return nil, ErrURLNotFound
 	}
@@ -174,25 +203,16 @@ func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string)
 	return url, nil
 }
 
-// GetByCreator retrieves URLs by their creator reference
 func (r *PostgresRepository) GetByCreator(ctx context.Context, creatorReference string) ([]*models.URL, error) {
-	rows, err := r.pool.Query(ctx,
-		"SELECT id, original, short, title, created_at, expires_at, clicks, creator_reference, deleted_at FROM urls WHERE creator_reference = $1 AND deleted_at IS NULL ORDER BY created_at DESC",
-		creatorReference)
+	results, err := r.queries.GetURLsByCreator(ctx, pgtypeText(creatorReference))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var urls []*models.URL
-	for rows.Next() {
-		url := &models.URL{}
-		err := rows.Scan(&url.ID, &url.Original, &url.Short, &url.Title, &url.CreatedAt, &url.ExpiresAt, &url.Clicks, &url.CreatorReference, &url.DeletedAt)
-		if err != nil {
-			return nil, err
-		}
+	for _, u := range results {
+		url := sqlcURLToModel(u)
 
-		// Skip expired URLs
 		if !url.ExpiresAt.IsZero() && url.ExpiresAt.Before(time.Now()) {
 			continue
 		}
@@ -200,145 +220,142 @@ func (r *PostgresRepository) GetByCreator(ctx context.Context, creatorReference 
 		urls = append(urls, url)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
 	return urls, nil
 }
 
-// IncrementClicks increments the click count for a URL
 func (r *PostgresRepository) IncrementClicks(ctx context.Context, short string) error {
-	_, err := r.pool.Exec(ctx, "UPDATE urls SET clicks = clicks + 1 WHERE short = $1 AND deleted_at IS NULL", short)
-	return err
+	_, err := r.queries.IncrementClicks(ctx, short)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrURLNotFound
+		}
+		return err
+	}
+	return nil
 }
 
-// Delete soft deletes a URL by setting its DeletedAt field
 func (r *PostgresRepository) Delete(ctx context.Context, short string) error {
-	_, err := r.pool.Exec(ctx, "UPDATE urls SET deleted_at = NOW() WHERE short = $1 AND deleted_at IS NULL", short)
-	return err
+	rowsAffected, err := r.queries.SoftDeleteURL(ctx, short)
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrURLNotFound
+	}
+	return nil
 }
 
-// DeleteWithCreator soft deletes a URL if the creator_reference matches
 func (r *PostgresRepository) DeleteWithCreator(ctx context.Context, short string, creatorReference string) error {
-	// Check if URL exists and belongs to the creator
 	existingURL, err := r.GetByShort(ctx, short)
 	if err != nil {
 		return err
 	}
 
-	// Check if the creator_reference matches
 	if existingURL.CreatorReference != creatorReference {
 		return errors.New("unauthorized: creator reference does not match")
 	}
 
-	// Soft delete URL
-	_, err = r.pool.Exec(ctx, "UPDATE urls SET deleted_at = NOW() WHERE short = $1 AND creator_reference = $2 AND deleted_at IS NULL", short, creatorReference)
-	return err
+	rowsAffected, err := r.queries.SoftDeleteURLWithCreator(ctx, sqlc.SoftDeleteURLWithCreatorParams{
+		Short:            short,
+		CreatorReference: pgtypeText(creatorReference),
+	})
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrURLNotFound
+	}
+	return nil
 }
 
-// HardDelete permanently removes a URL from the database
 func (r *PostgresRepository) HardDelete(ctx context.Context, short string) error {
-	_, err := r.pool.Exec(ctx, "DELETE FROM urls WHERE short = $1", short)
+	_, err := r.queries.HardDeleteURL(ctx, short)
 	return err
 }
 
-// StoreClick stores click analytics data
 func (r *PostgresRepository) StoreClick(ctx context.Context, click *models.Click) error {
-	fmt.Printf("Storing click: %+v\n", click)
-	_, err := r.pool.Exec(ctx,
-		"INSERT INTO clicks (url_id, url_short, ip, location, browser, device, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-		click.URLID, click.URLShort, click.IP, click.Location, click.Browser, click.Device, click.Timestamp)
+	_, err := r.queries.StoreClick(ctx, sqlc.StoreClickParams{
+		UrlID:     click.URLID,
+		UrlShort:  click.URLShort,
+		Ip:        click.IP,
+		Location:  pgtypeText(click.Location),
+		Browser:   pgtypeText(click.Browser),
+		Device:    pgtypeText(click.Device),
+		Timestamp: pgtypeTimestamp(click.Timestamp),
+	})
 	return err
 }
 
-// GetClicksByShort retrieves click analytics data for a URL
 func (r *PostgresRepository) GetClicksByShort(ctx context.Context, short string) ([]*models.Click, error) {
-	rows, err := r.pool.Query(ctx,
-		"SELECT id, url_id, url_short, ip, location, browser, device, timestamp FROM clicks WHERE url_short = $1 ORDER BY timestamp DESC",
-		short)
+	results, err := r.queries.GetClicksByShort(ctx, short)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var clicks []*models.Click
-	for rows.Next() {
-		click := &models.Click{}
-		err := rows.Scan(&click.ID, &click.URLID, &click.URLShort, &click.IP, &click.Location, &click.Browser, &click.Device, &click.Timestamp)
-		if err != nil {
-			return nil, err
-		}
-		clicks = append(clicks, click)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
+	for _, c := range results {
+		clicks = append(clicks, sqlcClickToModel(c))
 	}
 
 	return clicks, nil
 }
 
-// HasRecentClick checks if there's a recent click from the same visitor
 func (r *PostgresRepository) HasRecentClick(ctx context.Context, short string, ip string, browser string, device string) (bool, error) {
-	// Check if there's a click from the same visitor (IP + browser + device) within the last hour
-	var exists bool
-	err := r.pool.QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM clicks 
-			WHERE url_short = $1 
-			AND ip = $2 
-			AND browser = $3 
-			AND device = $4 
-			AND timestamp > NOW() - INTERVAL '1 hour'
-		)
-	`, short, ip, browser, device).Scan(&exists)
-
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
+	return r.queries.HasRecentClick(ctx, sqlc.HasRecentClickParams{
+		UrlShort: short,
+		Ip:       ip,
+		Browser:  pgtypeText(browser),
+		Device:   pgtypeText(device),
+	})
 }
 
-// UpdateURL updates an existing URL
 func (r *PostgresRepository) UpdateURL(ctx context.Context, short string, url *models.URL) error {
-	// Check if URL exists
-	_, err := r.GetByShort(ctx, short)
+	result, err := r.queries.UpdateURL(ctx, sqlc.UpdateURLParams{
+		Original:  url.Original,
+		Title:     pgtypeText(url.Title),
+		ExpiresAt: pgtypeTimestamp(url.ExpiresAt),
+		Short:     short,
+	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrURLNotFound
+		}
 		return err
 	}
 
-	// Update URL
-	_, err = r.pool.Exec(ctx,
-		"UPDATE urls SET original = $1, title = $2, expires_at = $3 WHERE short = $4 AND deleted_at IS NULL",
-		url.Original, url.Title, url.ExpiresAt, short)
-	return err
+	*url = *sqlcURLToModel(result)
+	return nil
 }
 
-// UpdateURLWithCreator updates an existing URL if the creator_reference matches
 func (r *PostgresRepository) UpdateURLWithCreator(ctx context.Context, short string, url *models.URL, creatorReference string) error {
-	// Check if URL exists and belongs to the creator
 	existingURL, err := r.GetByShort(ctx, short)
 	if err != nil {
 		return err
 	}
 
-	// Check if the creator_reference matches
 	if existingURL.CreatorReference != creatorReference {
 		return errors.New("unauthorized: creator reference does not match")
 	}
 
-	// Update URL
-	_, err = r.pool.Exec(ctx,
-		"UPDATE urls SET original = $1, title = $2, expires_at = $3 WHERE short = $4 AND creator_reference = $5 AND deleted_at IS NULL",
-		url.Original, url.Title, url.ExpiresAt, short, creatorReference)
-	return err
+	result, err := r.queries.UpdateURLWithCreator(ctx, sqlc.UpdateURLWithCreatorParams{
+		Original:         url.Original,
+		Title:            pgtypeText(url.Title),
+		ExpiresAt:        pgtypeTimestamp(url.ExpiresAt),
+		Short:            short,
+		CreatorReference: pgtypeText(creatorReference),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrURLNotFound
+		}
+		return err
+	}
+
+	*url = *sqlcURLToModel(result)
+	return nil
 }
 
-// LogURLHistory logs a URL modification
 func (r *PostgresRepository) LogURLHistory(ctx context.Context, urlID int64, short string, action string, oldValue, newValue interface{}, modifiedBy string) error {
-	// Convert values to JSON
 	oldValueJSON, err := json.Marshal(oldValue)
 	if err != nil {
 		return err
@@ -349,74 +366,65 @@ func (r *PostgresRepository) LogURLHistory(ctx context.Context, urlID int64, sho
 		return err
 	}
 
-	// Insert history record
-	_, err = r.pool.Exec(ctx,
-		"INSERT INTO url_history (url_id, url_short, action, old_value, new_value, modified_at, modified_by) VALUES ($1, $2, $3, $4, $5, NOW(), $6)",
-		urlID, short, action, oldValueJSON, newValueJSON, modifiedBy)
+	_, err = r.queries.LogURLHistory(ctx, sqlc.LogURLHistoryParams{
+		UrlID:      urlID,
+		UrlShort:   short,
+		Action:     action,
+		OldValue:   oldValueJSON,
+		NewValue:   newValueJSON,
+		ModifiedBy: pgtypeText(modifiedBy),
+	})
 	return err
 }
 
-// GetClickAnalytics retrieves aggregated click analytics data for a URL
 func (r *PostgresRepository) GetClickAnalytics(ctx context.Context, short string) (map[string]interface{}, error) {
-	// Get total clicks
-	var totalClicks int64
-	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM clicks WHERE url_short = $1", short).Scan(&totalClicks)
+	totalClicks, err := r.queries.GetTotalClicks(ctx, short)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get clicks by browser
-	rows, err := r.pool.Query(ctx, "SELECT browser, COUNT(*) FROM clicks WHERE url_short = $1 GROUP BY browser", short)
+	browserRows, err := r.queries.GetClicksByBrowser(ctx, short)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	browserStats := make(map[string]int64)
-	for rows.Next() {
+	for _, row := range browserRows {
 		var browser string
-		var count int64
-		if err := rows.Scan(&browser, &count); err != nil {
-			return nil, err
+		if row.Browser.Valid {
+			browser = row.Browser.String
 		}
-		browserStats[browser] = count
+		browserStats[browser] = row.Count
 	}
 
-	// Get clicks by device
-	rows, err = r.pool.Query(ctx, "SELECT device, COUNT(*) FROM clicks WHERE url_short = $1 GROUP BY device", short)
+	deviceRows, err := r.queries.GetClicksByDevice(ctx, short)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	deviceStats := make(map[string]int64)
-	for rows.Next() {
+	for _, row := range deviceRows {
 		var device string
-		var count int64
-		if err := rows.Scan(&device, &count); err != nil {
-			return nil, err
+		if row.Device.Valid {
+			device = row.Device.String
 		}
-		deviceStats[device] = count
+		deviceStats[device] = row.Count
 	}
 
-	// Get clicks by location
-	rows, err = r.pool.Query(ctx, "SELECT location, COUNT(*) FROM clicks WHERE url_short = $1 GROUP BY location", short)
+	locationRows, err := r.queries.GetClicksByLocation(ctx, short)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	locationStats := make(map[string]int64)
-	for rows.Next() {
+	for _, row := range locationRows {
 		var location string
-		var count int64
-		if err := rows.Scan(&location, &count); err != nil {
-			return nil, err
+		if row.Location.Valid {
+			location = row.Location.String
 		}
-		locationStats[location] = count
+		locationStats[location] = row.Count
 	}
 
-	// Return aggregated data
 	return map[string]interface{}{
 		"total_clicks": totalClicks,
 		"browsers":     browserStats,
@@ -425,7 +433,6 @@ func (r *PostgresRepository) GetClickAnalytics(ctx context.Context, short string
 	}, nil
 }
 
-// Close closes the database connection
 func (r *PostgresRepository) Close() {
 	r.pool.Close()
 }
