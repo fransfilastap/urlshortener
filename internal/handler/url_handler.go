@@ -17,7 +17,15 @@ import (
 //go:embed redirect.html
 var redirectHTML string
 
+//go:embed error.html
+var errorHTML string
+
+//go:embed index.html
+var indexHTML string
+
 var redirectTmpl = template.Must(template.New("redirect").Parse(redirectHTML))
+var errorTmpl = template.Must(template.New("error").Parse(errorHTML))
+var indexTmpl = template.Must(template.New("index").Parse(indexHTML))
 
 type URLServicer interface {
 	CreateShortURL(ctx context.Context, originalURL string, customShort string, title string, expireAfter time.Duration, creatorReference string) (*domain.URL, error)
