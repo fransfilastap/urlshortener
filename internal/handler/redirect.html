@@ -4,80 +4,509 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Redirecting</title>
-    <noscript>
-        <meta http-equiv="refresh" content="0;url={{.OriginalURL}}">
-    </noscript>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        accent: '#feca04',
-                        bphnblue: '#142452'
-                    }
-                }
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --color-midnight-canvas: #000000;
+            --color-frost-white: #ffffff;
+            --color-deep-shadow: #181818;
+            --color-whisper-gray: #6d6d6d;
+            --color-misty-gray: #636363;
+            --gradient-deep-ocean: linear-gradient(135deg, rgb(160, 224, 171) 0%, rgb(255, 172, 46) 50%, rgb(165, 45, 37) 100%);
+            --gradient-deep-ocean-subtle: linear-gradient(135deg, rgba(160, 224, 171, 0.15) 0%, rgba(255, 172, 46, 0.08) 50%, rgba(165, 45, 37, 0.12) 100%);
+
+            --font-roobert: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+            --text-caption: 11px;
+            --text-body: 16px;
+            --text-subheading: 18px;
+            --text-heading-sm: 29px;
+            --text-heading: 39px;
+
+            --spacing-8: 8px;
+            --spacing-12: 12px;
+            --spacing-28: 28px;
+            --spacing-40: 40px;
+            --spacing-48: 48px;
+            --spacing-64: 64px;
+
+            --radius-cards: 10px;
+            --radius-buttons: 75px;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-roobert);
+            background: var(--color-midnight-canvas);
+            color: var(--color-frost-white);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: var(--gradient-deep-ocean);
+            opacity: 0.35;
+            filter: blur(80px) saturate(1.2);
+            transform: scale(1.4);
+            animation: gradientShift 12s ease-in-out infinite alternate;
+        }
+
+        .gradient-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 30% 20%, rgba(160, 224, 171, 0.25) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, rgba(165, 45, 37, 0.2) 0%, transparent 50%);
+            animation: orbFloat 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes gradientShift {
+            0% { transform: scale(1.4) translate(0, 0); }
+            100% { transform: scale(1.5) translate(-2%, 3%); }
+        }
+
+        @keyframes orbFloat {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        header {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            padding: var(--spacing-12) var(--spacing-28);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        header img {
+            height: 36px;
+            filter: brightness(0) invert(1);
+            opacity: 0.9;
+        }
+
+        main {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-28) var(--spacing-28) var(--spacing-40);
+        }
+
+        .redirect-card {
+            width: 100%;
+            max-width: 520px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-cards);
+            padding: var(--spacing-40);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
+                        0 20px 60px -15px rgba(0, 0, 0, 0.5);
+            animation: cardReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes cardReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
-        };
-    </script>
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-12);
+            margin-bottom: var(--spacing-28);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgb(160, 224, 171);
+            box-shadow: 0 0 12px rgba(160, 224, 171, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        .status-label {
+            font-size: var(--text-caption);
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-whisper-gray);
+        }
+
+        .url-display {
+            font-size: var(--text-body);
+            line-height: 1.5;
+            color: var(--color-frost-white);
+            word-break: break-all;
+            margin-bottom: var(--spacing-12);
+            padding: 16px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            transition: background 0.3s ease;
+            animation: urlSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        .url-display:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        @keyframes urlSlide {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .url-display a {
+            color: var(--color-frost-white);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .url-display a:hover {
+            opacity: 0.8;
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-8);
+            margin-bottom: var(--spacing-40);
+            animation: metaFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+            opacity: 0;
+        }
+
+        @keyframes metaFade {
+            to { opacity: 1; }
+        }
+
+        .meta-row span {
+            font-size: var(--text-caption);
+            color: var(--color-whisper-gray);
+        }
+
+        .meta-row .dot {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: var(--color-whisper-gray);
+            opacity: 0.5;
+        }
+
+        .countdown-ring-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-28);
+            animation: actionsReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        @keyframes actionsReveal {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .countdown-wrapper {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-12);
+        }
+
+        .countdown-ring {
+            position: relative;
+            width: 44px;
+            height: 44px;
+        }
+
+        .countdown-ring svg {
+            transform: rotate(-90deg);
+            width: 44px;
+            height: 44px;
+        }
+
+        .countdown-ring .ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.06);
+            stroke-width: 2.5;
+        }
+
+        .countdown-ring .ring-progress {
+            fill: none;
+            stroke: rgb(160, 224, 171);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-dasharray: 113.1;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear;
+            filter: drop-shadow(0 0 4px rgba(160, 224, 171, 0.4));
+        }
+
+        .countdown-number {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--color-frost-white);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .countdown-label {
+            font-size: var(--text-caption);
+            color: var(--color-whisper-gray);
+            letter-spacing: 0.02em;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 32px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-buttons);
+            color: var(--color-frost-white);
+            font-family: var(--font-roobert);
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .cta-button:hover {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4);
+        }
+
+        .cta-button:active {
+            transform: scale(0.98) translateY(0);
+        }
+
+        .cta-button svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .cta-button:hover svg {
+            transform: translateX(2px);
+        }
+
+        .divider-line {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+            margin: var(--spacing-28) 0;
+        }
+
+        .safety-note {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-12);
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 6px;
+            animation: metaFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards;
+            opacity: 0;
+        }
+
+        .safety-note svg {
+            flex-shrink: 0;
+            width: 14px;
+            height: 14px;
+            color: var(--color-whisper-gray);
+            margin-top: 2px;
+        }
+
+        .safety-note p {
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--color-whisper-gray);
+        }
+
+        footer {
+            position: relative;
+            z-index: 10;
+            padding: var(--spacing-12) var(--spacing-28);
+            text-align: center;
+        }
+
+        footer span {
+            font-size: var(--text-caption);
+            color: var(--color-whisper-gray);
+            opacity: 0.5;
+        }
+
+        @media (max-width: 640px) {
+            .redirect-card {
+                padding: var(--spacing-28);
+            }
+
+            .countdown-ring-container {
+                flex-direction: column;
+                gap: var(--spacing-28);
+            }
+
+            .cta-button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            header {
+                padding: var(--spacing-12) var(--spacing-12);
+            }
+
+            main {
+                padding: var(--spacing-28) var(--spacing-12);
+            }
+
+            footer {
+                padding: var(--spacing-12) var(--spacing-12);
+            }
+        }
+    </style>
 </head>
-<body class="bg-white min-h-screen flex flex-col justify-between">
+<body>
+    <div class="gradient-bg" aria-hidden="true"></div>
 
-<!-- Header -->
-<header class="px-6 py-4 flex items-center justify-start border-b border-gray-200">
-    <img src="/static/img/logo.svg" alt="Logo" class="h-10">
-</header>
+    <header>
+        <img src="/static/img/logo.svg" alt="Logo" />
+    </header>
 
-<!-- Main Layout -->
-<main class="flex-1 flex items-center justify-center px-6 py-12">
-    <div class="bg-white rounded shadow-lg p-6 border border-gray-200 max-w-lg w-full">
-        <h1 class="text-sm font-semibold text-gray-700 mb-2">Destination preview</h1>
+    <main>
+        <div class="redirect-card" role="status" aria-live="polite">
+            <div class="status-indicator">
+                <div class="pulse-dot" aria-hidden="true"></div>
+                <span class="status-label">Redirecting</span>
+            </div>
 
-        <div class="border border-gray-300 rounded mb-4 bg-gray-100 p-4 flex items-center justify-center h-32">
-            <div class="text-center text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h18M3 10h18M3 15h18M3 20h18" />
-                </svg>
-                <p class="text-xs mt-2">No preview available</p>
+            <div class="url-display">
+                <a id="redirect-link" href="{{.OriginalURL}}">{{.OriginalURL}}</a>
+            </div>
+
+            <div class="meta-row">
+                <span>External link</span>
+                <span class="dot" aria-hidden="true"></span>
+                <span>Shortened URL</span>
+            </div>
+
+            <div class="divider-line" aria-hidden="true"></div>
+
+            <div class="countdown-ring-container">
+                <div class="countdown-wrapper">
+                    <div class="countdown-ring" aria-hidden="true">
+                        <svg viewBox="0 0 44 44">
+                            <circle class="ring-bg" cx="22" cy="22" r="18"></circle>
+                            <circle class="ring-progress" id="ring-progress" cx="22" cy="22" r="18"></circle>
+                        </svg>
+                        <div class="countdown-number" id="countdown">4</div>
+                    </div>
+                    <div>
+                        <div class="countdown-label">seconds remaining</div>
+                    </div>
+                </div>
+
+                <a id="manual-redirect" href="{{.OriginalURL}}" class="cta-button">
+                    Continue now
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="divider-line" aria-hidden="true"></div>
+
+            <div class="safety-note">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <p>This link was created with a URL shortener. Verify the destination before proceeding if you have concerns.</p>
             </div>
         </div>
+    </main>
 
-        <a id="redirect-link" href="{{.OriginalURL}}" class="block text-blue-600 font-semibold text-sm underline mb-2 break-words">
-            {{.OriginalURL}}
-        </a>
-        <p class="text-sm text-gray-500 mb-6">No description available</p>
+    <footer>
+        <span>&copy; 2025 All rights reserved.</span>
+    </footer>
 
-        <a id="manual-redirect" href="{{.OriginalURL}}" class="bg-bphnblue hover:bg-[#0e1e3b] text-white text-sm font-medium py-2 px-4 rounded inline-block w-full text-center">
-            Continue to destination →
-        </a>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const destinationUrl = document.getElementById('redirect-link').textContent;
+            const redirectLink = document.getElementById('redirect-link');
+            const manualRedirect = document.getElementById('manual-redirect');
+            const countdownElement = document.getElementById('countdown');
+            const ringProgress = document.getElementById('ring-progress');
 
-        <p class="text-center text-xs text-gray-500 mt-4">You'll be redirected in <span id="countdown">4</span> seconds...</p>
-    </div>
-</main>
+            const circumference = 2 * Math.PI * 18;
+            ringProgress.style.strokeDasharray = circumference;
+            ringProgress.style.strokeDashoffset = '0';
 
-<!-- Footer -->
-<footer class="bg-bphnblue text-white text-center text-xs py-4">
-    &copy; 2025 All rights reserved.
-</footer>
+            let countdown = 4;
+            const totalTime = countdown;
+            let elapsed = 0;
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const destinationUrl = document.getElementById('redirect-link').textContent;
-        document.getElementById('redirect-link').href = destinationUrl;
-        document.getElementById('manual-redirect').href = destinationUrl;
+            redirectLink.href = destinationUrl;
+            manualRedirect.href = destinationUrl;
 
-        let countdown = 4;
-        const countdownElement = document.getElementById('countdown');
+            const timer = setInterval(() => {
+                countdown--;
+                elapsed++;
+                countdownElement.textContent = countdown;
 
-        const timer = setInterval(() => {
-            countdown--;
-            countdownElement.textContent = countdown;
-            if (countdown <= 0) {
-                clearInterval(timer);
-                window.location.href = destinationUrl;
-            }
-        }, 1000);
-    });
-</script>
+                const offset = (elapsed / totalTime) * circumference;
+                ringProgress.style.strokeDashoffset = offset;
+
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    window.location.href = destinationUrl;
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
