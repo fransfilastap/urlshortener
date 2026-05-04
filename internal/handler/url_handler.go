@@ -68,6 +68,19 @@ type UpdateURLRequest struct {
 	CreatorReference string        `json:"creator_reference,omitempty"`
 }
 
+type TemplateData struct {
+	OriginalURL string
+	ShortURL    string
+	Clicks      int64
+}
+
+type ErrorTemplateData struct {
+	ErrorCode    int
+	ErrorTitle   string
+	ErrorMessage string
+	ShortCode    string
+}
+
 type URLHandler struct {
 	service URLServicer
 	baseURL string
@@ -202,12 +215,6 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 		Msg("Serving redirect page for URL")
 
 	if strings.Contains(c.Request().Header.Get("Accept"), "text/html") {
-		type TemplateData struct {
-			OriginalURL string
-			ShortURL    string
-			Clicks      int64
-		}
-
 		data := TemplateData{
 			OriginalURL: url.Original,
 			ShortURL:    url.Short,
@@ -496,4 +503,20 @@ func (h *URLHandler) GetURLsByCreator(c echo.Context) error {
 		Msg("URLs retrieved by creator successfully")
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func renderErrorHTML(c echo.Context, code int, title string, message string) error {
+	data := ErrorTemplateData{
+		ErrorCode:    code,
+		ErrorTitle:   title,
+		ErrorMessage: message,
+		ShortCode:    c.Param("code"),
+	}
+	c.Response().Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
+	c.Response().WriteHeader(code)
+	if err := errorTmpl.Execute(c.Response().Writer, data); err != nil {
+		log.Error().Err(err).Msg("Failed to render error page")
+		return c.JSON(code, map[string]string{"error": title})
+	}
+	return nil
 }
