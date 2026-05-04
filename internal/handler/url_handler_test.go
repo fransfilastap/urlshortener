@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -458,4 +459,110 @@ func TestURLHandler_Integration(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-var _ URLServicer = (*MockURLService)(nil)
+func TestRedirectURL_HTMLNotFound(t *testing.T) {
+	e := echo.New()
+	mockService := new(MockURLService)
+	h := NewURLHandler(mockService, "http://localhost:8080", "test-api-key")
+
+	req := httptest.NewRequest(http.MethodGet, "/notfound", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("code")
+	c.SetParamValues("notfound")
+
+	mockService.On("GetByShort", mock.Anything, "notfound").Return(nil, domain.ErrURLNotFound)
+
+	err := h.RedirectURL(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Tautan Tidak Ditemukan")
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestRedirectURL_JSONNotFound(t *testing.T) {
+	e := echo.New()
+	mockService := new(MockURLService)
+	h := NewURLHandler(mockService, "http://localhost:8080", "test-api-key")
+
+	req := httptest.NewRequest(http.MethodGet, "/notfound", nil)
+	req.Header.Set("Accept", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("code")
+	c.SetParamValues("notfound")
+
+	mockService.On("GetByShort", mock.Anything, "notfound").Return(nil, domain.ErrURLNotFound)
+
+	err := h.RedirectURL(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	var response map[string]string
+	jsonErr := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, jsonErr)
+	assert.Equal(t, "URL not found", response["error"])
+
+	mockService.AssertExpectations(t)
+}
+
+func TestRedirectURL_HTMLEmptyCode(t *testing.T) {
+	e := echo.New()
+	mockService := new(MockURLService)
+	h := NewURLHandler(mockService, "http://localhost:8080", "test-api-key")
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("code")
+	c.SetParamValues("")
+
+	err := h.RedirectURL(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Permintaan Tidak Valid")
+}
+
+func TestRedirectURL_HTMLInternalServerError(t *testing.T) {
+	e := echo.New()
+	mockService := new(MockURLService)
+	h := NewURLHandler(mockService, "http://localhost:8080", "test-api-key")
+
+	req := httptest.NewRequest(http.MethodGet, "/broken", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("code")
+	c.SetParamValues("broken")
+
+	mockService.On("GetByShort", mock.Anything, "broken").Return(nil, errors.New("database connection failed"))
+
+	err := h.RedirectURL(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Terjadi Kesalahan")
+}
+
+func TestIndexHandler(t *testing.T) {
+	e := echo.New()
+	mockService := new(MockURLService)
+	h := NewURLHandler(mockService, "http://localhost:8080", "test-api-key")
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := h.Index(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Perpendek")
+	assert.Contains(t, rec.Header().Get("Content-Type"), "text/html")
+}
