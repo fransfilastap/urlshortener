@@ -24,8 +24,10 @@ type Config struct {
 	LogLevel  string
 	LogFormat string
 
-	SessionSecret string
-	SessionMaxAge int
+	SessionSecret          string
+	SessionMaxAge          int
+	AutoMigrate            bool
+	ExpectedSchemaVersion  int
 }
 
 func NewConfig() *Config {
@@ -47,6 +49,8 @@ func NewConfig() *Config {
 		LogFormat:           getEnv("LOG_FORMAT", "json"),
 		SessionSecret:        getEnv("SESSION_SECRET", "change-me-in-production"),
 		SessionMaxAge:        getEnvAsInt("SESSION_MAX_AGE", 86400),
+		AutoMigrate:           getEnvAsBool("AUTO_MIGRATE", true),
+		ExpectedSchemaVersion: getEnvAsInt("EXPECTED_SCHEMA_VERSION", 0),
 	}
 }
 
@@ -70,6 +74,16 @@ func getEnvAsDuration(key string, defaultValue time.Duration) time.Duration {
 	if value, exists := os.LookupEnv(key); exists {
 		if duration, err := time.ParseDuration(value); err == nil {
 			return duration
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value, exists := os.LookupEnv(key); exists {
+		parsed, err := strconv.ParseBool(value)
+		if err == nil {
+			return parsed
 		}
 	}
 	return defaultValue
