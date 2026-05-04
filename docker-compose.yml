@@ -18,6 +18,8 @@ services:
       - VALKEY_TTL=${VALKEY_TTL:-24h}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
+      - AUTO_MIGRATE=${AUTO_MIGRATE:-false}
+      - EXPECTED_SCHEMA_VERSION=${EXPECTED_SCHEMA_VERSION:-1}
     depends_on:
       - postgres
       - valkey
