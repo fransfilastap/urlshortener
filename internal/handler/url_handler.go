@@ -74,19 +74,6 @@ func NewURLHandler(service URLServicer, baseURL string, apiKey string) *URLHandl
 	}
 }
 
-func (h *URLHandler) Register(e *echo.Echo) {
-	e.GET("/:code", h.RedirectURL)
-
-	apiGroup := e.Group("")
-	apiGroup.Use(APIKeyMiddleware(h.apiKey))
-	apiGroup.POST("/api/shorten", h.ShortenURL)
-	apiGroup.GET("/api/urls/:code", h.GetURLInfo)
-	apiGroup.PUT("/api/urls/:code", h.UpdateURL)
-	apiGroup.DELETE("/api/urls/:code", h.DeleteURL)
-	apiGroup.GET("/api/urls/:code/analytics", h.GetURLAnalytics)
-	apiGroup.GET("/api/urls/creator/:creator_reference", h.GetURLsByCreator)
-}
-
 func (h *URLHandler) ShortenURL(c echo.Context) error {
 	var req ShortenRequest
 	if err := c.Bind(&req); err != nil {
