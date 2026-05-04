@@ -4,84 +4,63 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>BPHN URL Shortener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
         :root {
-            --color-midnight-canvas: #000000;
-            --color-frost-white: #ffffff;
-            --color-deep-shadow: #181818;
-            --color-whisper-gray: #6d6d6d;
-            --color-misty-gray: #636363;
-            --gradient-deep-ocean: linear-gradient(135deg, rgb(160, 224, 171) 0%, rgb(255, 172, 46) 50%, rgb(165, 45, 37) 100%);
-            --gradient-deep-ocean-subtle: linear-gradient(135deg, rgba(160, 224, 171, 0.15) 0%, rgba(255, 172, 46, 0.08) 50%, rgba(165, 45, 37, 0.12) 100%);
-            --font-roobert: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --text-caption: 11px;
-            --text-body: 16px;
+            --color-eggshell: #fdfcfc;
+            --color-powder: #f5f3f1;
+            --color-chalk: #e5e5e5;
+            --color-fog: #b1b0b0;
+            --color-gravel: #777169;
+            --color-slate: #a59f97;
+            --color-cinder: #575340;
+            --color-obsidian: #000000;
+            --color-signal-blue: #0447ff;
+            --font-waldenburg: 'Cormorant Garamond', ui-serif, Georgia, serif;
+            --font-inter: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --text-caption: 10px;
+            --text-body: 14px;
+            --text-body-lg: 16px;
             --text-subheading: 18px;
-            --text-heading: 39px;
-            --text-heading-lg: 54px;
+            --text-heading-sm: 20px;
+            --text-heading: 32px;
+            --text-heading-lg: 36px;
+            --text-display: 48px;
+            --spacing-4: 4px;
             --spacing-8: 8px;
             --spacing-12: 12px;
+            --spacing-16: 16px;
+            --spacing-20: 20px;
+            --spacing-24: 24px;
             --spacing-28: 28px;
+            --spacing-32: 32px;
             --spacing-40: 40px;
             --spacing-48: 48px;
+            --spacing-56: 56px;
             --spacing-64: 64px;
-            --spacing-152: 152px;
-            --page-max-width: 1078px;
-            --radius-cards: 10px;
-            --radius-buttons: 75px;
+            --spacing-72: 72px;
+            --spacing-96: 96px;
+            --page-max-width: 1200px;
+            --radius-cards: 16px;
+            --radius-buttons: 9999px;
+            --shadow-card: rgba(0, 0, 0, 0.4) 0px 0px 1.143px 0px, rgba(0, 0, 0, 0.04) 0px 2px 4px 0px;
+            --shadow-card-hover: rgba(0, 0, 0, 0.4) 0px 0px 1px 0px, rgba(0, 0, 0, 0.04) 0px 4px 8px 0px;
         }
 
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        html {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+        html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
         body {
-            font-family: var(--font-roobert);
-            background: var(--color-midnight-canvas);
-            color: var(--color-frost-white);
+            font-family: var(--font-inter);
+            background: var(--color-eggshell);
+            color: var(--color-obsidian);
             min-height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
-        }
-
-        .gradient-bg {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            background: var(--gradient-deep-ocean);
-            opacity: 0.35;
-            filter: blur(80px) saturate(1.2);
-            transform: scale(1.4);
-            animation: gradientShift 12s ease-in-out infinite alternate;
-        }
-
-        .gradient-bg::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at 30% 20%, rgba(160, 224, 171, 0.25) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(165, 45, 37, 0.2) 0%, transparent 50%);
-            animation: orbFloat 8s ease-in-out infinite alternate;
-        }
-
-        @keyframes gradientShift {
-            0% { transform: scale(1.4) translate(0, 0); }
-            100% { transform: scale(1.5) translate(-2%, 3%); }
-        }
-
-        @keyframes orbFloat {
-            0% { opacity: 0.6; }
-            100% { opacity: 1; }
         }
 
         header {
@@ -89,21 +68,23 @@
             z-index: 10;
             display: flex;
             align-items: center;
-            padding: var(--spacing-12) var(--spacing-28);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            height: 36px;
+            max-width: var(--page-max-width);
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 var(--spacing-24);
+            border-bottom: 1px solid var(--color-chalk);
+            animation: headerReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes headerReveal {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header img {
-            height: 36px;
-            filter: brightness(0) invert(1);
-            opacity: 0;
-            animation: logoReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
-        }
-
-        @keyframes logoReveal {
-            to { opacity: 0.9; }
+            height: 20px;
         }
 
         main {
@@ -112,193 +93,221 @@
             flex: 1;
             display: flex;
             align-items: center;
-            padding: var(--spacing-64) var(--spacing-28);
+            padding: var(--spacing-96) var(--spacing-24);
         }
 
         .hero-content {
             max-width: var(--page-max-width);
             width: 100%;
             margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: var(--spacing-64);
+            align-items: center;
         }
 
-        .tagline {
-            font-size: var(--text-heading-lg);
-            font-weight: 300;
-            line-height: 1.39;
-            color: var(--color-frost-white);
-            margin-bottom: var(--spacing-28);
-            letter-spacing: -0.02em;
-            animation: taglineReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+        .hero-left {
+            animation: heroLeftReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
             opacity: 0;
             transform: translateY(24px);
         }
 
-        @keyframes taglineReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes heroLeftReveal {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .eyebrow {
+            font-family: var(--font-inter);
+            font-size: var(--text-caption);
+            font-weight: 400;
+            color: var(--color-gravel);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: var(--spacing-12);
+        }
+
+        .tagline {
+            font-family: var(--font-waldenburg);
+            font-size: var(--text-display);
+            font-weight: 300;
+            line-height: 1.08;
+            letter-spacing: -0.96px;
+            color: var(--color-obsidian);
+            margin-bottom: var(--spacing-24);
         }
 
         .tagline .accent {
-            background: var(--gradient-deep-ocean);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--color-obsidian);
+            position: relative;
+        }
+
+        .tagline .accent::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--color-signal-blue);
         }
 
         .description {
-            font-size: var(--text-body);
+            font-family: var(--font-inter);
+            font-size: var(--text-body-lg);
+            font-weight: 400;
             line-height: 1.5;
-            color: var(--color-whisper-gray);
-            max-width: 55ch;
-            margin-bottom: var(--spacing-48);
+            color: var(--color-gravel);
+            max-width: 48ch;
             animation: descReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        @keyframes descReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: var(--spacing-28);
-            max-width: 560px;
-            animation: featuresReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
             opacity: 0;
             transform: translateY(16px);
         }
 
-        @keyframes featuresReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes descReveal {
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: var(--spacing-12);
+        .hero-right {
+            animation: heroRightReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
+            opacity: 0;
+            transform: translateY(16px);
         }
 
-        .feature-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            margin-top: 2px;
+        @keyframes heroRightReveal {
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .feature-icon svg {
-            width: 16px;
-            height: 16px;
-            stroke: var(--color-whisper-gray);
+        .feature-card {
+            background: #ffffff;
+            border-radius: var(--radius-cards);
+            box-shadow: var(--shadow-card);
+            padding: var(--spacing-24);
+            transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .feature-text h3 {
-            font-size: var(--text-subheading);
+        .feature-card:hover {
+            box-shadow: var(--shadow-card-hover);
+        }
+
+        .feature-card + .feature-card {
+            margin-top: var(--spacing-16);
+        }
+
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: var(--spacing-8);
+            vertical-align: middle;
+        }
+
+        .feature-dot.blue { background: var(--color-signal-blue); }
+        .feature-dot.green { background: #16a34a; }
+        .feature-dot.amber { background: #d97706; }
+
+        .feature-card-title {
+            font-family: var(--font-inter);
+            font-size: var(--text-body-lg);
+            font-weight: 500;
+            color: var(--color-obsidian);
+            margin-bottom: var(--spacing-8);
+            line-height: 1.5;
+        }
+
+        .feature-card-title .dot {
+            margin-right: var(--spacing-8);
+        }
+
+        .feature-card-body {
+            font-family: var(--font-inter);
+            font-size: var(--text-body);
             font-weight: 400;
-            color: var(--color-frost-white);
-            margin-bottom: 2px;
-        }
-
-        .feature-text p {
-            font-size: var(--text-caption);
-            line-height: 1.58;
-            color: var(--color-whisper-gray);
+            color: var(--color-gravel);
+            line-height: 1.43;
         }
 
         footer {
             position: relative;
             z-index: 10;
-            padding: var(--spacing-12) var(--spacing-28);
+            padding: var(--spacing-16) var(--spacing-24);
             text-align: center;
+            border-top: 1px solid var(--color-chalk);
+            max-width: var(--page-max-width);
+            margin: 0 auto;
+            width: 100%;
         }
 
         footer span {
+            font-family: var(--font-inter);
             font-size: var(--text-caption);
-            color: var(--color-whisper-gray);
-            opacity: 0.5;
+            font-weight: 400;
+            color: var(--color-fog);
         }
 
-        @media (max-width: 640px) {
-            header {
-                padding: var(--spacing-12) var(--spacing-12);
+        @media (max-width: 768px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-40);
             }
             main {
-                padding: var(--spacing-40) var(--spacing-12);
+                padding: var(--spacing-48) var(--spacing-16);
             }
             .tagline {
                 font-size: var(--text-heading);
+                letter-spacing: -0.64px;
             }
-            footer {
-                padding: var(--spacing-12) var(--spacing-12);
+            header {
+                padding: 0 var(--spacing-16);
             }
         }
     </style>
 </head>
 <body>
-    <div class="gradient-bg" aria-hidden="true"></div>
-
     <header>
         <img src="/static/img/logo.svg" alt="BPHN" />
     </header>
 
     <main>
         <div class="hero-content">
-            <h1 class="tagline">
-                <span class="accent">Perpendek.</span> Bagikan. Lacak.
-            </h1>
-            <p class="description">
-                Layanan pemendek tautan resmi BPHN untuk menyederhanakan dan melacak tautan dengan aman.
-            </p>
-
-            <div class="features">
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <div class="hero-left">
+                <div class="eyebrow">BPHN URL Shortener</div>
+                <h1 class="tagline">
+                    <span class="accent">Perpendek.</span><br>
+                    Bagikan. Lacak.
+                </h1>
+                <p class="description">
+                    Layanan pemendek tautan resmi BPHN untuk menyederhanakan dan melacak tautan dengan aman.
+                </p>
+            </div>
+            <div class="hero-right">
+                <div class="feature-card">
+                    <div class="feature-card-title">
+                        <span class="feature-dot blue"></span>
+                        Pengalihan Cepat
                     </div>
-                    <div class="feature-text">
-                        <h3>Pengalihan Cepat</h3>
-                        <p>Redirect instan tanpa latensi yang terasa oleh pengguna akhir.</p>
-                    </div>
+                    <div class="feature-card-body">Redirect instan tanpa latensi yang terasa.</div>
                 </div>
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                <div class="feature-card">
+                    <div class="feature-card-title">
+                        <span class="feature-dot green"></span>
+                        Analitik Tautan
                     </div>
-                    <div class="feature-text">
-                        <h3>Analitik Tautan</h3>
-                        <p>Pantau performa tautan secara real-time dengan data klik dan perangkat.</p>
-                    </div>
+                    <div class="feature-card-body">Pantau performa tautan secara real-time dengan data klik dan perangkat.</div>
                 </div>
-                <div class="feature-item">
-                    <div class="feature-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <div class="feature-card">
+                    <div class="feature-card-title">
+                        <span class="feature-dot amber"></span>
+                        Aman dan Terlacak
                     </div>
-                    <div class="feature-text">
-                        <h3>Aman dan Terlacak</h3>
-                        <p>Setiap tautan terverifikasi dan dapat dilacak untuk transparansi penuh.</p>
-                    </div>
+                    <div class="feature-card-body">Setiap tautan terverifikasi dan dapat dilacak untuk transparansi penuh.</div>
                 </div>
             </div>
         </div>
     </main>
 
     <footer>
-        <span>BPHN — Kementerian Hukum dan Hak Asasi Manusia Republik Indonesia</span>
+        <span>BPHN — Kementerian Hukum</span>
     </footer>
 </body>
 </html>

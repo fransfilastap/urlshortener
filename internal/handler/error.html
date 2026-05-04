@@ -4,44 +4,53 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{{.ErrorCode}} — {{.ErrorTitle}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
         :root {
-            --color-midnight-canvas: #000000;
-            --color-frost-white: #ffffff;
-            --color-deep-shadow: #181818;
-            --color-whisper-gray: #6d6d6d;
-            --color-misty-gray: #636363;
-            --gradient-deep-ocean: linear-gradient(135deg, rgb(160, 224, 171) 0%, rgb(255, 172, 46) 50%, rgb(165, 45, 37) 100%);
-            --gradient-deep-ocean-subtle: linear-gradient(135deg, rgba(160, 224, 171, 0.15) 0%, rgba(255, 172, 46, 0.08) 50%, rgba(165, 45, 37, 0.12) 100%);
-            --font-roobert: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --text-caption: 11px;
-            --text-body: 16px;
-            --text-heading-sm: 29px;
-            --text-heading: 39px;
+            --color-eggshell: #fdfcfc;
+            --color-powder: #f5f3f1;
+            --color-chalk: #e5e5e5;
+            --color-fog: #b1b0b0;
+            --color-gravel: #777169;
+            --color-slate: #a59f97;
+            --color-obsidian: #000000;
+            --color-signal-blue: #0447ff;
+            --font-waldenburg: 'Cormorant Garamond', ui-serif, Georgia, serif;
+            --font-inter: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --text-caption: 10px;
+            --text-body: 14px;
+            --text-body-lg: 16px;
+            --text-heading-sm: 20px;
+            --text-heading: 32px;
+            --text-heading-lg: 36px;
+            --text-display: 48px;
             --spacing-8: 8px;
             --spacing-12: 12px;
+            --spacing-16: 16px;
+            --spacing-20: 20px;
+            --spacing-24: 24px;
             --spacing-28: 28px;
+            --spacing-32: 32px;
             --spacing-40: 40px;
-            --radius-cards: 10px;
+            --spacing-48: 48px;
+            --spacing-56: 56px;
+            --spacing-64: 64px;
+            --spacing-72: 72px;
+            --spacing-96: 96px;
+            --radius-cards: 16px;
+            --shadow-card: rgba(0, 0, 0, 0.4) 0px 0px 1.143px 0px, rgba(0, 0, 0, 0.04) 0px 2px 4px 0px;
+            --shadow-button: rgba(0, 0, 0, 0.06) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 1px 2px, rgba(0, 0, 0, 0.04) 0px 2px 4px;
         }
 
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
         body {
-            font-family: var(--font-roobert);
-            background: var(--color-midnight-canvas);
-            color: var(--color-frost-white);
+            font-family: var(--font-inter);
+            background: var(--color-eggshell);
+            color: var(--color-obsidian);
             min-height: 100dvh;
             display: flex;
             align-items: center;
@@ -49,124 +58,78 @@
             overflow-x: hidden;
         }
 
-        .gradient-bg {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            background: var(--gradient-deep-ocean);
-            opacity: 0.35;
-            filter: blur(80px) saturate(1.2);
-            transform: scale(1.4);
-            animation: gradientShift 12s ease-in-out infinite alternate;
-        }
-
-        .gradient-bg::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at 30% 20%, rgba(160, 224, 171, 0.25) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(165, 45, 37, 0.2) 0%, transparent 50%);
-            animation: orbFloat 8s ease-in-out infinite alternate;
-        }
-
-        @keyframes gradientShift {
-            0% { transform: scale(1.4) translate(0, 0); }
-            100% { transform: scale(1.5) translate(-2%, 3%); }
-        }
-
-        @keyframes orbFloat {
-            0% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
         .error-card {
-            position: relative;
-            z-index: 10;
             width: 100%;
-            max-width: 520px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            max-width: 480px;
+            background: #ffffff;
             border-radius: var(--radius-cards);
             padding: var(--spacing-40);
-            margin: var(--spacing-28);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
-                        0 20px 60px -15px rgba(0, 0, 0, 0.5);
-            animation: cardReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            margin: var(--spacing-24);
+            box-shadow: var(--shadow-card);
+            animation: cardReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(12px);
         }
 
         @keyframes cardReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .error-code {
-            font-size: 72px;
+            font-family: var(--font-waldenburg);
+            font-size: var(--text-display);
             font-weight: 300;
-            line-height: 1;
-            background: var(--gradient-deep-ocean);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: var(--spacing-28);
-            animation: codeReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+            line-height: 1.08;
+            letter-spacing: -0.96px;
+            color: var(--color-obsidian);
+            margin-bottom: var(--spacing-8);
+            animation: codeReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
             opacity: 0;
-            transform: translateY(12px);
+            transform: translateY(8px);
         }
 
         @keyframes codeReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .error-title {
+            font-family: var(--font-inter);
             font-size: var(--text-heading-sm);
-            font-weight: 400;
-            line-height: 1.21;
-            color: var(--color-frost-white);
+            font-weight: 500;
+            line-height: 1.4;
+            color: var(--color-obsidian);
             margin-bottom: var(--spacing-12);
-            animation: titleReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+            animation: titleReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
             opacity: 0;
-            transform: translateY(12px);
+            transform: translateY(8px);
         }
 
         @keyframes titleReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .error-message {
-            font-size: var(--text-body);
+            font-family: var(--font-inter);
+            font-size: var(--text-body-lg);
+            font-weight: 400;
             line-height: 1.5;
-            color: var(--color-whisper-gray);
-            max-width: 55ch;
-            animation: msgReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+            color: var(--color-gravel);
+            max-width: 48ch;
+            animation: msgReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
             opacity: 0;
-            transform: translateY(12px);
+            transform: translateY(8px);
         }
 
         @keyframes msgReveal {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .divider-line {
+        .divider {
             width: 100%;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-            margin: var(--spacing-28) 0;
-            animation: dividerReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards;
+            background: var(--color-chalk);
+            margin: var(--spacing-24) 0;
+            animation: dividerReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
             opacity: 0;
         }
 
@@ -175,35 +138,35 @@
         }
 
         .error-meta {
+            font-family: var(--font-inter);
             font-size: var(--text-caption);
-            color: var(--color-whisper-gray);
-            animation: metaReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards;
+            color: var(--color-fog);
+            animation: metaReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
             opacity: 0;
         }
 
         @keyframes metaReveal {
-            to { opacity: 0.5; }
+            to { opacity: 1; }
+        }
+
+        .error-meta .domain {
+            color: var(--color-obsidian);
+            font-weight: 500;
         }
 
         @media (max-width: 640px) {
-            .error-card {
-                padding: var(--spacing-28);
-            }
-            .error-code {
-                font-size: 56px;
-            }
+            .error-card { padding: var(--spacing-24); }
+            .error-code { font-size: var(--text-heading-lg); letter-spacing: -0.72px; }
         }
     </style>
 </head>
 <body>
-    <div class="gradient-bg" aria-hidden="true"></div>
-
     <div class="error-card" role="alert">
         <div class="error-code">{{.ErrorCode}}</div>
         <h1 class="error-title">{{.ErrorTitle}}</h1>
         <p class="error-message">{{.ErrorMessage}}</p>
-        <div class="divider-line" aria-hidden="true"></div>
-        <div class="error-meta">s.bphn.go.id</div>
+        <div class="divider" aria-hidden="true"></div>
+        <div class="error-meta"><span class="domain">s.bphn.go.id</span></div>
     </div>
 </body>
 </html>
