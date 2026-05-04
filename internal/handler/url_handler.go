@@ -146,8 +146,13 @@ func (h *URLHandler) ShortenURL(c echo.Context) error {
 
 func (h *URLHandler) RedirectURL(c echo.Context) error {
 	code := c.Param("code")
+	acceptsHTML := strings.Contains(c.Request().Header.Get("Accept"), "text/html")
+
 	if code == "" {
 		log.Error().Msg("Missing URL code in redirect request")
+		if acceptsHTML {
+			return renderErrorHTML(c, http.StatusBadRequest, "Permintaan Tidak Valid", "Kode tautan tidak disertakan dalam permintaan.")
+		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing URL code"})
 	}
 
@@ -157,9 +162,15 @@ func (h *URLHandler) RedirectURL(c echo.Context) error {
 	if err != nil {
 		if errors.Is(err, domain.ErrURLNotFound) {
 			log.Error().Err(err).Str("code", code).Msg("URL not found for redirect")
+			if acceptsHTML {
+				return renderErrorHTML(c, http.StatusNotFound, "Tautan Tidak Ditemukan", "Kode tautan ini tidak ada atau sudah kedaluwarsa.")
+			}
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "URL not found"})
 		}
 		log.Error().Err(err).Str("code", code).Msg("Failed to retrieve URL for redirect")
+		if acceptsHTML {
+			return renderErrorHTML(c, http.StatusInternalServerError, "Terjadi Kesalahan", "Server mengalami gangguan. Silakan coba beberapa saat lagi.")
+		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve URL"})
 	}
 
