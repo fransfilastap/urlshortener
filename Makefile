@@ -128,6 +128,41 @@ docker-down:
 	@echo "Stopping Docker Compose services..."
 	$(DOCKER_COMPOSE) down
 
+# Generate sqlc code
+.PHONY: sqlc-generate
+sqlc-generate:
+	@echo "Generating sqlc code..."
+	sqlc generate
+
+# Validate sqlc queries
+.PHONY: sqlc-validate
+sqlc-validate:
+	@echo "Validating sqlc queries..."
+	sqlc vet
+
+# Database migrations
+MIGRATE_DB_URL ?= postgres://postgres:postgres@localhost:5432/urlshortener?sslmode=disable
+
+.PHONY: migrate-up
+migrate-up:
+	@echo "Running migrations..."
+	migrate -path db/migrations -database "$(MIGRATE_DB_URL)" up
+
+.PHONY: migrate-down
+migrate-down:
+	@echo "Rolling back last migration..."
+	migrate -path db/migrations -database "$(MIGRATE_DB_URL)" down 1
+
+.PHONY: migrate-create
+migrate-create:
+	@echo "Creating migration $(NAME)..."
+	migrate create -ext sql -dir db/migrations -seq $(NAME)
+
+.PHONY: migrate-force
+migrate-force:
+	@echo "Forcing migration version $(VERS)..."
+	migrate -path db/migrations -database "$(MIGRATE_DB_URL)" force $(VERS)
+
 # Show help
 .PHONY: help
 help:
@@ -156,4 +191,10 @@ help:
 	@echo "  docker-run      Run Docker container"
 	@echo "  docker-up       Start Docker Compose services"
 	@echo "  docker-down     Stop Docker Compose services"
+	@echo "  sqlc-generate   Generate sqlc code"
+	@echo "  sqlc-validate   Validate sqlc queries"
+	@echo "  migrate-up      Run database migrations"
+	@echo "  migrate-down    Rollback last migration"
+	@echo "  migrate-create  Create new migration (requires NAME=)"
+	@echo "  migrate-force   Force migration version (requires VERS=)"
 	@echo "  help            Show this help"
