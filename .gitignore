@@ -42,3 +42,8 @@ Thumbs.db
 
 # Binary
 /urlshortener
+
+# Frontend
+web/node_modules
+web/dist
+web/.vite

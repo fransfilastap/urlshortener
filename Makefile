@@ -17,10 +17,16 @@ LDFLAGS=-ldflags "-s -w"
 .PHONY: all
 all: clean build
 
-# Build the application
+# Build the application (includes frontend)
 .PHONY: build
-build:
+build: web-build
 	@echo "Building $(BINARY_NAME)..."
+	$(GO) build $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_PACKAGE)
+
+# Build without frontend
+.PHONY: build-go
+build-go:
+	@echo "Building $(BINARY_NAME) (Go only)..."
 	$(GO) build $(LDFLAGS) -o $(BINARY_NAME) $(MAIN_PACKAGE)
 
 # Build for multiple platforms
@@ -54,6 +60,25 @@ clean:
 	@echo "Cleaning..."
 	$(GO) clean
 	rm -f $(BINARY_NAME) $(BINARY_NAME)_linux_$(GOARCH) $(BINARY_NAME)_darwin_$(GOARCH) $(BINARY_NAME)_windows_$(GOARCH).exe $(COVERAGE_FILE)
+	rm -rf web/dist
+
+# Install frontend dependencies
+.PHONY: web-deps
+web-deps:
+	@echo "Installing frontend dependencies..."
+	cd web && npm install
+
+# Build frontend
+.PHONY: web-build
+web-build:
+	@echo "Building frontend..."
+	cd web && npm run build
+
+# Dev frontend
+.PHONY: web-dev
+web-dev:
+	@echo "Starting frontend dev server..."
+	cd web && npm run dev
 
 # Run tests
 .PHONY: test
