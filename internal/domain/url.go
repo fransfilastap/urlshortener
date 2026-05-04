@@ -1,10 +1,9 @@
-package models
+package domain
 
 import (
 	"time"
 )
 
-// URL represents a shortened URL
 type URL struct {
 	ID               int64      `json:"id" db:"id"`
 	Original         string     `json:"original" db:"original"`
@@ -17,7 +16,6 @@ type URL struct {
 	DeletedAt        *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
-// NewURL creates a new URL instance
 func NewURL(original, short, title string, expiresAt time.Time, creatorReference string) *URL {
 	return &URL{
 		Original:         original,

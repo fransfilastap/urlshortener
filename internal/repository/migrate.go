@@ -1,4 +1,4 @@
-package store
+package repository
 
 import (
 	"errors"
@@ -10,12 +10,10 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
-// MigrationsFS wraps fs.FS for migration file access.
 type MigrationsFS struct {
 	fs.FS
 }
 
-// RunMigrations runs all pending database migrations using the embedded migration files.
 func RunMigrations(dbURL string, migrationsFS fs.FS) error {
 	d, err := iofs.New(migrationsFS, "db/migrations")
 	if err != nil {

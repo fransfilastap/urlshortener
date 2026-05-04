@@ -12,16 +12,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// InitLogger initializes the global logger with the specified configuration
 func InitLogger(level, format string) {
-	// Set up time format
 	zerolog.TimeFieldFormat = time.RFC3339
 
-	// Set up log level
 	logLevel := getLogLevel(level)
 	zerolog.SetGlobalLevel(logLevel)
 
-	// Set up log output format
 	var output io.Writer = os.Stdout
 	if strings.ToLower(format) == "console" {
 		output = zerolog.ConsoleWriter{
@@ -30,17 +26,14 @@ func InitLogger(level, format string) {
 		}
 	}
 
-	// Set global logger
 	log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
 
-	// Log initialization
 	log.Info().
 		Str("level", level).
 		Str("format", format).
 		Msg("Logger initialized")
 }
 
-// getLogLevel converts a string log level to zerolog.Level
 func getLogLevel(level string) zerolog.Level {
 	switch strings.ToLower(level) {
 	case "debug":
@@ -60,7 +53,6 @@ func getLogLevel(level string) zerolog.Level {
 	}
 }
 
-// EchoLogger returns a middleware function that logs HTTP requests
 func EchoLogger() echo.MiddlewareFunc {
 	return middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogURI:    true,
@@ -81,7 +73,6 @@ func EchoLogger() echo.MiddlewareFunc {
 	})
 }
 
-// Get returns the global logger
 func Get() *zerolog.Logger {
 	return &log.Logger
 }

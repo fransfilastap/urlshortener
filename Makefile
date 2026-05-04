@@ -2,7 +2,7 @@
 
 # Variables
 BINARY_NAME=urlshortener
-MAIN_PACKAGE=.
+MAIN_PACKAGE=./cmd/urlshortener
 GO=go
 DOCKER=docker
 DOCKER_COMPOSE=docker-compose

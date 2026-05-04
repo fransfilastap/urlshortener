@@ -1,10 +1,9 @@
-package models
+package domain
 
 import (
 	"time"
 )
 
-// Click represents analytics data for a URL click
 type Click struct {
 	ID        int64     `json:"id" db:"id"`
 	URLID     int64     `json:"url_id" db:"url_id"`
@@ -16,7 +15,6 @@ type Click struct {
 	Timestamp time.Time `json:"timestamp" db:"timestamp"`
 }
 
-// NewClick creates a new Click instance
 func NewClick(urlID int64, urlShort, ip, location, browser, device string) *Click {
 	return &Click{
 		URLID:     urlID,

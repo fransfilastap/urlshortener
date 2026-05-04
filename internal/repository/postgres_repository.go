@@ -1,4 +1,4 @@
-package store
+package repository
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fransfilastap/urlshortener/internal/db/sqlc"
-	"github.com/fransfilastap/urlshortener/models"
+	"github.com/fransfilastap/urlshortener/internal/domain"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,7 +78,7 @@ func pgtypeTimestampPtr(t *time.Time) pgtype.Timestamp {
 	return pgtype.Timestamp{Time: *t, Valid: true}
 }
 
-func sqlcURLToModel(u sqlc.Url) *models.URL {
+func sqlcURLToModel(u sqlc.Url) *domain.URL {
 	var expiresAt time.Time
 	if u.ExpiresAt.Valid {
 		expiresAt = u.ExpiresAt.Time
@@ -99,7 +99,7 @@ func sqlcURLToModel(u sqlc.Url) *models.URL {
 		creatorReference = u.CreatorReference.String
 	}
 
-	return &models.URL{
+	return &domain.URL{
 		ID:               int64(u.ID),
 		Original:         u.Original,
 		Short:            u.Short,
@@ -112,7 +112,7 @@ func sqlcURLToModel(u sqlc.Url) *models.URL {
 	}
 }
 
-func sqlcClickToModel(c sqlc.Click) *models.Click {
+func sqlcClickToModel(c sqlc.Click) *domain.Click {
 	var location string
 	if c.Location.Valid {
 		location = c.Location.String
@@ -128,7 +128,7 @@ func sqlcClickToModel(c sqlc.Click) *models.Click {
 		device = c.Device.String
 	}
 
-	return &models.Click{
+	return &domain.Click{
 		ID:        int64(c.ID),
 		URLID:     c.UrlID,
 		URLShort:  c.UrlShort,
@@ -140,14 +140,14 @@ func sqlcClickToModel(c sqlc.Click) *models.Click {
 	}
 }
 
-func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) (*models.URL, error) {
+func (r *PostgresRepository) Create(ctx context.Context, url *domain.URL) (*domain.URL, error) {
 	var exists bool
 	err := r.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM urls WHERE short = $1 AND deleted_at IS NULL)", url.Short).Scan(&exists)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, ErrURLExists
+		return nil, domain.ErrURLExists
 	}
 
 	result, err := r.queries.CreateURL(ctx, sqlc.CreateURLParams{
@@ -167,11 +167,11 @@ func (r *PostgresRepository) Create(ctx context.Context, url *models.URL) (*mode
 	return sqlcURLToModel(result), nil
 }
 
-func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*models.URL, error) {
+func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*domain.URL, error) {
 	result, err := r.queries.GetURLByShort(ctx, short)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrURLNotFound
+			return nil, domain.ErrURLNotFound
 		}
 		return nil, err
 	}
@@ -179,17 +179,17 @@ func (r *PostgresRepository) GetByShort(ctx context.Context, short string) (*mod
 	url := sqlcURLToModel(result)
 
 	if !url.ExpiresAt.IsZero() && url.ExpiresAt.Before(time.Now()) {
-		return nil, ErrURLNotFound
+		return nil, domain.ErrURLNotFound
 	}
 
 	return url, nil
 }
 
-func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string) (*models.URL, error) {
+func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string) (*domain.URL, error) {
 	result, err := r.queries.GetURLByOriginal(ctx, original)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrURLNotFound
+			return nil, domain.ErrURLNotFound
 		}
 		return nil, err
 	}
@@ -197,19 +197,19 @@ func (r *PostgresRepository) GetByOriginal(ctx context.Context, original string)
 	url := sqlcURLToModel(result)
 
 	if !url.ExpiresAt.IsZero() && url.ExpiresAt.Before(time.Now()) {
-		return nil, ErrURLNotFound
+		return nil, domain.ErrURLNotFound
 	}
 
 	return url, nil
 }
 
-func (r *PostgresRepository) GetByCreator(ctx context.Context, creatorReference string) ([]*models.URL, error) {
+func (r *PostgresRepository) GetByCreator(ctx context.Context, creatorReference string) ([]*domain.URL, error) {
 	results, err := r.queries.GetURLsByCreator(ctx, pgtypeText(creatorReference))
 	if err != nil {
 		return nil, err
 	}
 
-	var urls []*models.URL
+	var urls []*domain.URL
 	for _, u := range results {
 		url := sqlcURLToModel(u)
 
@@ -227,7 +227,7 @@ func (r *PostgresRepository) IncrementClicks(ctx context.Context, short string) 
 	_, err := r.queries.IncrementClicks(ctx, short)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrURLNotFound
+			return domain.ErrURLNotFound
 		}
 		return err
 	}
@@ -240,7 +240,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, short string) error {
 		return err
 	}
 	if rowsAffected == 0 {
-		return ErrURLNotFound
+		return domain.ErrURLNotFound
 	}
 	return nil
 }
@@ -263,7 +263,7 @@ func (r *PostgresRepository) DeleteWithCreator(ctx context.Context, short string
 		return err
 	}
 	if rowsAffected == 0 {
-		return ErrURLNotFound
+		return domain.ErrURLNotFound
 	}
 	return nil
 }
@@ -273,7 +273,7 @@ func (r *PostgresRepository) HardDelete(ctx context.Context, short string) error
 	return err
 }
 
-func (r *PostgresRepository) StoreClick(ctx context.Context, click *models.Click) error {
+func (r *PostgresRepository) StoreClick(ctx context.Context, click *domain.Click) error {
 	_, err := r.queries.StoreClick(ctx, sqlc.StoreClickParams{
 		UrlID:     click.URLID,
 		UrlShort:  click.URLShort,
@@ -286,13 +286,13 @@ func (r *PostgresRepository) StoreClick(ctx context.Context, click *models.Click
 	return err
 }
 
-func (r *PostgresRepository) GetClicksByShort(ctx context.Context, short string) ([]*models.Click, error) {
+func (r *PostgresRepository) GetClicksByShort(ctx context.Context, short string) ([]*domain.Click, error) {
 	results, err := r.queries.GetClicksByShort(ctx, short)
 	if err != nil {
 		return nil, err
 	}
 
-	var clicks []*models.Click
+	var clicks []*domain.Click
 	for _, c := range results {
 		clicks = append(clicks, sqlcClickToModel(c))
 	}
@@ -309,7 +309,7 @@ func (r *PostgresRepository) HasRecentClick(ctx context.Context, short string, i
 	})
 }
 
-func (r *PostgresRepository) UpdateURL(ctx context.Context, short string, url *models.URL) error {
+func (r *PostgresRepository) UpdateURL(ctx context.Context, short string, url *domain.URL) error {
 	result, err := r.queries.UpdateURL(ctx, sqlc.UpdateURLParams{
 		Original:  url.Original,
 		Title:     pgtypeText(url.Title),
@@ -318,7 +318,7 @@ func (r *PostgresRepository) UpdateURL(ctx context.Context, short string, url *m
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrURLNotFound
+			return domain.ErrURLNotFound
 		}
 		return err
 	}
@@ -327,7 +327,7 @@ func (r *PostgresRepository) UpdateURL(ctx context.Context, short string, url *m
 	return nil
 }
 
-func (r *PostgresRepository) UpdateURLWithCreator(ctx context.Context, short string, url *models.URL, creatorReference string) error {
+func (r *PostgresRepository) UpdateURLWithCreator(ctx context.Context, short string, url *domain.URL, creatorReference string) error {
 	existingURL, err := r.GetByShort(ctx, short)
 	if err != nil {
 		return err
@@ -346,7 +346,7 @@ func (r *PostgresRepository) UpdateURLWithCreator(ctx context.Context, short str
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrURLNotFound
+			return domain.ErrURLNotFound
 		}
 		return err
 	}
@@ -429,7 +429,7 @@ func (r *PostgresRepository) GetClickAnalytics(ctx context.Context, short string
 		"total_clicks": totalClicks,
 		"browsers":     browserStats,
 		"devices":      deviceStats,
-		"locations":    locationStats,
+		"locations":   locationStats,
 	}, nil
 }
 
