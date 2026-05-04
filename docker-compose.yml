@@ -79,6 +79,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_DB=${POSTGRES_DB:-urlshortener}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - PGPASSWORD=${POSTGRES_PASSWORD:-postgres}
     entrypoint: []
     command: >
       /bin/sh -c "
