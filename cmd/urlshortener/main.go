@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -21,19 +23,83 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		runMigrateCommand()
+		return
+	}
+
+	runServer()
+}
+
+func runMigrateCommand() {
+	cfg := config.NewConfig()
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "Usage: urlshortener migrate <up|version|force> [version]")
+		os.Exit(1)
+	}
+
+	switch os.Args[2] {
+	case "up":
+		if err := repository.RunMigrations(cfg.PostgresURL, urlshortener.MigrationsFS); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running migrations: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Migrations applied successfully")
+	case "version":
+		version, dirty, err := repository.GetSchemaVersion(cfg.PostgresURL, urlshortener.MigrationsFS)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting schema version: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Schema version: %d (dirty: %v)\n", version, dirty)
+	case "force":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "Usage: urlshortener migrate force <version>")
+			os.Exit(1)
+		}
+		version, err := strconv.Atoi(os.Args[3])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid version number: %v\n", err)
+			os.Exit(1)
+		}
+		if err := repository.ForceVersion(cfg.PostgresURL, urlshortener.MigrationsFS, version); err != nil {
+			fmt.Fprintf(os.Stderr, "Error forcing version: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Forced schema version to %d\n", version)
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown migrate command: %s\n", os.Args[2])
+		fmt.Fprintln(os.Stderr, "Usage: urlshortener migrate <up|version|force> [version]")
+		os.Exit(1)
+	}
+}
+
+func runServer() {
 	cfg := config.NewConfig()
 
 	logger.InitLogger(cfg.LogLevel, cfg.LogFormat)
+
+	if cfg.AutoMigrate {
+		if err := repository.RunMigrations(cfg.PostgresURL, urlshortener.MigrationsFS); err != nil {
+			log.Fatal().Err(err).Msg("Failed to run database migrations")
+		}
+	} else {
+		log.Info().Msg("Migrations skipped (AUTO_MIGRATE=false)")
+	}
+
+	if cfg.ExpectedSchemaVersion > 0 {
+		if err := repository.ValidateSchemaVersion(cfg.PostgresURL, urlshortener.MigrationsFS, cfg.ExpectedSchemaVersion); err != nil {
+			log.Fatal().Err(err).Msg("Schema version check failed")
+		}
+		log.Info().Int("version", cfg.ExpectedSchemaVersion).Msg("Schema version validated")
+	}
 
 	db, err := repository.NewPostgresRepository(cfg.PostgresURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer db.Close()
-
-	if err := repository.RunMigrations(cfg.PostgresURL, urlshortener.MigrationsFS); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run database migrations")
-	}
 
 	cache := repository.NewCacheRepository(
 		cfg.ValkeyCacheAddr,
