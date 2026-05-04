@@ -31,9 +31,9 @@ func main() {
 	}
 	defer db.Close()
 
-	// Initialize database schema
-	if err := db.InitSchema(context.Background()); err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize database schema")
+	// Run database migrations
+	if err := store.RunMigrations(cfg.PostgresURL, migrationsFS); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run database migrations")
 	}
 
 	// Initialize cache
